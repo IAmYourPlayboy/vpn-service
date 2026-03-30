@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # --- Приложение ---
-    app_name: str = "VPN Service"
+    app_name: str = "Andigo"
     debug: bool = False
     secret_key: str = "change-me-in-production"
 

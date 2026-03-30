@@ -31,7 +31,7 @@ async def cmd_start(message: Message):
             await db.commit()
 
             await message.answer(
-                "👋 <b>Добро пожаловать в VPN-сервис!</b>\n\n"
+                "👋 <b>Добро пожаловать в Andigo!</b>\n\n"
                 "Аккаунт создан автоматически.\n"
                 "Выбери действие из меню ниже:",
                 reply_markup=main_menu_keyboard(),

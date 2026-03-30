@@ -9,7 +9,7 @@ export default function Landing() {
     <div className="min-h-screen bg-dark text-white">
       {/* Хедер */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-dark-border">
-        <div className="text-xl font-bold">🛡️ VPN</div>
+        <div className="text-xl font-bold">Andigo</div>
         <div className="flex gap-3">
           <Link to="/login" className="text-sm text-gray-400 hover:text-white px-4 py-2">
             Войти
@@ -70,7 +70,7 @@ export default function Landing() {
         <h2 className="text-2xl font-bold mb-8">Простой тариф</h2>
         <div className="bg-dark-card border border-dark-border rounded-2xl p-8 max-w-sm mx-auto">
           <div className="text-4xl font-bold mb-2">
-            ??? <span className="text-lg text-gray-400">₽/мес</span>
+            249 <span className="text-lg text-gray-400">₽/мес</span>
           </div>
           <p className="text-gray-400 mb-6">Полный доступ ко всем серверам</p>
           <ul className="text-left text-sm text-gray-300 space-y-2 mb-8">
@@ -90,7 +90,7 @@ export default function Landing() {
 
       {/* Футер */}
       <footer className="text-center py-8 text-sm text-gray-500 border-t border-dark-border">
-        © 2026 VPN Service
+        © 2026 Andigo
       </footer>
     </div>
   )

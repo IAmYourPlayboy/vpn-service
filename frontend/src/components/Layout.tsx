@@ -17,7 +17,7 @@ export default function Layout() {
     <div className="min-h-screen bg-dark flex flex-col md:flex-row">
       {/* Сайдбар — десктоп */}
       <aside className="hidden md:flex flex-col w-56 bg-dark-card border-r border-dark-border p-4">
-        <div className="text-xl font-bold mb-8">🛡️ VPN</div>
+        <div className="text-xl font-bold mb-8">Andigo</div>
         <nav className="flex flex-col gap-1 flex-1">
           {navItems.map((item) => (
             <NavLink

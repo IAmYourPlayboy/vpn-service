@@ -27,7 +27,7 @@ async def seed():
         # Тариф "Стандарт"
         plan = Plan(
             name="Стандарт",
-            price=299.00,
+            price=249.00,
             duration_days=30,
             is_active=True,
         )
@@ -38,7 +38,7 @@ async def seed():
             name="Нидерланды #1",
             country="Netherlands",
             country_code="NL",
-            host="127.0.0.1",
+            host="37.230.115.104",
             is_active=True,
             current_load=0,
             ping_status="offline",

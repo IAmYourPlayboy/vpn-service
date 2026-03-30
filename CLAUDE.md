@@ -1,6 +1,6 @@
-# VPN-сервис -- CLAUDE.md
+# Andigo -- CLAUDE.md
 
-Этот файл описывает VPN-сервис для мини-бизнеса. Читай его при каждом новом сеансе.
+Этот файл описывает Andigo (VPN-сервис) для мини-бизнеса. Читай его при каждом новом сеансе.
 
 ---
 
@@ -19,12 +19,13 @@
 
 ## 2. Описание проекта
 
-- **Что:** VPN-сервис (мини-бизнес, десятки-сотни пользователей)
+- **Что:** Andigo — VPN-сервис (мини-бизнес, десятки-сотни пользователей)
 - **Подход:** Marzban (VPN-ядро) + кастомный фронтенд + Telegram-бот + оплата через ЮКасса
-- **VDS:** Ubuntu 24.04, 1 CPU, 1 ГБ RAM, 15 ГБ SSD, 249 руб/мес
+- **VDS:** Ubuntu 24.04, 1 vCPU, 2 ГБ RAM, 40 ГБ SSD, IP: 37.230.115.104
 - **Старт:** всё на одном VDS, архитектура масштабируемая (будущие VPN-ноды в других странах)
-- **Домен:** ещё не куплен, бренд не придуман
-- **Статус:** весь код написан (69 файлов), но **ни разу не запускался** -- зависимости не установлены
+- **Домен:** andigo.su
+- **Цена:** 249 руб/мес (один тариф "Стандарт")
+- **Статус:** код написан, работает локально, зависимости установлены, seed-данные загружены
 
 ---
 
@@ -35,7 +36,7 @@
         |
         v
 +----------------------------------------------+
-|              VDS (1 ГБ RAM)                  |
+|     VDS 37.230.115.104 (2 ГБ RAM)           |
 |  Nginx (reverse proxy + статика React)       |
 |  FastAPI (API + aiogram бот в одном процессе)|
 |  SQLite (наша БД)    Marzban (VPN-ядро)     |
@@ -44,7 +45,7 @@
    VPN-ноды в других странах
 ```
 
-**RAM-бюджет:** OS ~200 МБ, Marzban ~250 МБ, FastAPI+бот ~150 МБ, Nginx ~20 МБ, свободно ~300 МБ + 1 ГБ swap.
+**RAM-бюджет (2 ГБ):** OS ~200 МБ, Marzban ~250 МБ, FastAPI+бот ~150 МБ, Nginx ~20 МБ, свободно ~1300 МБ + 1 ГБ swap.
 
 ---
 
@@ -390,7 +391,7 @@ alembic history                   # История миграций
 
 ### backend/.env (разработка)
 ```
-APP_NAME=VPN Service
+APP_NAME=Andigo
 DEBUG=true
 SECRET_KEY=dev-secret-key
 DATABASE_URL=sqlite+aiosqlite:///./vpn.db
@@ -401,10 +402,10 @@ MARZBAN_URL=http://localhost:8080
 MARZBAN_USERNAME=admin
 MARZBAN_PASSWORD=admin
 TELEGRAM_BOT_TOKEN=         # Получить у @BotFather
-TELEGRAM_WEBHOOK_URL=       # https://your-domain.com/api/bot/webhook
+TELEGRAM_WEBHOOK_URL=       # https://andigo.su/api/bot/webhook
 YOKASSA_SHOP_ID=            # Из личного кабинета ЮКасса
 YOKASSA_SECRET_KEY=         # Из личного кабинета ЮКасса
-DOMAIN=localhost
+DOMAIN=andigo.su
 ```
 
 ### deploy/marzban.env (Marzban на VDS)
@@ -431,20 +432,20 @@ SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3
 2. ~~Создать первую миграцию Alembic~~ -- 5 таблиц, миграция применена
 3. ~~Запустить и протестировать локально~~ -- бэкенд и фронтенд работают
 4. ~~Исправить баги~~ -- passlib→bcrypt, type hint в bot.py, обработка ошибок в main.py
-5. ~~Добавить seed-данные~~ -- тариф "Стандарт" (299р/мес), сервер NL, админ admin@test.com
+5. ~~Добавить seed-данные~~ -- тариф "Стандарт" (249р/мес), сервер NL, админ admin@test.com
+6. ~~Ребрендинг~~ -- VPN Service → Andigo, домен andigo.su, VDS IP 37.230.115.104, цена 249р
 
 ### Не сделано (следующие шаги):
-6. **Настроить Telegram-бота** (получить токен у @BotFather)
-7. **Настроить ЮКасса** (тестовый режим, shop_id + secret_key)
-8. **Купить домен**, придумать бренд
-9. **Подготовить VDS** (запустить setup.sh)
+7. **Настроить Telegram-бота** (получить токен у @BotFather)
+8. **Настроить ЮКасса** (тестовый режим, shop_id + secret_key)
+9. **Подготовить VDS** (запустить setup.sh на 37.230.115.104)
 10. **Задеплоить на VDS** (git clone + docker compose up)
 
 ---
 
 ## 14. Ключевые решения (не менять без обсуждения)
 
-- **SQLite, НЕ PostgreSQL** -- экономия ~100 МБ RAM на VDS с 1 ГБ
+- **SQLite, НЕ PostgreSQL** -- экономия ~100 МБ RAM на VDS
 - **Статический React через Vite** -- без Node.js на сервере, Nginx раздаёт файлы
 - **aiogram встроен в FastAPI** -- один процесс, webhook mode, экономия RAM
 - **ispmanager удалить с VDS** -- освобождает ~100-150 МБ RAM
