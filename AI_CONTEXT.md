@@ -114,28 +114,33 @@ venv/Scripts/python seed.py
 
 ---
 
-## Где мы остановились
+## Где мы остановились (конец сессии 2026-03-30)
 
-Весь код написан и работает локально. Следующие шаги:
+Код написан, работает локально, запушен на GitHub (2 коммита). **Следующая задача: подготовка VDS и деплой.**
 
-### 7. Настроить Telegram-бота
-- Получить токен у @BotFather
-- Вписать `TELEGRAM_BOT_TOKEN` в `backend/.env`
-- Для локальной разработки можно использовать polling вместо webhook
-- Код бота полностью написан: `backend/app/bot/`
+### ТЕКУЩИЙ ПРИОРИТЕТ: Подготовка VDS (37.230.115.104)
 
-### 8. Настроить ЮКасса
-- Зарегистрироваться, получить тестовый shop_id + secret_key
-- Вписать `YOKASSA_SHOP_ID` и `YOKASSA_SECRET_KEY` в `backend/.env`
-- Код оплаты: `backend/app/services/payment.py`, `backend/app/api/payments.py`
+**Проблема:** SSH-доступ к VDS не настроен. Хостер: **FirstVDS** (firstvds.ru).
 
-### 9. Подготовить VDS
-- Ubuntu 24.04, 1 vCPU, 2 ГБ RAM, 40 ГБ SSD, IP: 37.230.115.104
-- Скрипт настройки: `deploy/scripts/setup.sh`
+**Что нужно от пользователя:**
+1. Зайти в ЛК FirstVDS → Виртуальные серверы → сервер 37.230.115.104
+2. Найти **root-пароль** (раздел "Инструкция" или "Доступ", или email при создании)
+3. Скинуть пароль Claude, чтобы настроить SSH-ключ и запустить setup
 
-### 10. Задеплоить на VDS
-- `deploy/docker-compose.yml` — 5 сервисов (nginx, backend, marzban, frontend build, certbot)
-- `deploy/scripts/deploy.sh` — git pull + docker compose up
+**После получения SSH-доступа, план деплоя:**
+1. Подключиться по SSH как root
+2. Добавить SSH-ключ `~/.ssh/id_ed25519.pub` на сервер (для беспарольного доступа)
+3. Запустить `deploy/scripts/setup.sh` (Docker, UFW, swap)
+4. Склонировать репо: `git clone https://github.com/IAmYourPlayboy/vpn-service.git /opt/vpn`
+5. Настроить `backend/.env` на сервере (production secrets)
+6. `cd /opt/vpn/deploy && docker compose up -d`
+7. Настроить DNS: A-запись andigo.su → 37.230.115.104
+8. Получить SSL: certbot для andigo.su
+9. Раскомментировать HTTPS-блок в nginx/default.conf
+
+### Отложенные задачи (после деплоя):
+- Настроить Telegram-бота (получить токен у @BotFather)
+- Настроить ЮКасса (тестовый режим, shop_id + secret_key)
 
 ---
 
@@ -203,5 +208,14 @@ vpn/
 
 - **Remote:** `git@github.com:IAmYourPlayboy/vpn-service.git` (SSH)
 - **Branch:** `main`
-- **Последний коммит:** Initial commit (72 файла, 7426 строк)
+- **Коммиты:** 2 (Initial commit + Rebrand to Andigo)
 - **Git config (локальный):** user.name=IAmYourPlayboy, user.email=gysy545@gmail.com
+
+## Инфраструктура
+
+| Ресурс | Детали |
+|---|---|
+| **VDS** | FirstVDS, 1 vCPU, 2 ГБ RAM, 40 ГБ SSD, Ubuntu 24.04, IP: 37.230.115.104 |
+| **Домен** | andigo.su (550 руб/год, DNS ещё не настроен) |
+| **GitHub** | IAmYourPlayboy/vpn-service (SSH, код запушен) |
+| **SSH к VDS** | **НЕ настроен** — нужен root-пароль из ЛК FirstVDS |
