@@ -114,33 +114,36 @@ venv/Scripts/python seed.py
 
 ---
 
-## Где мы остановились (конец сессии 2026-03-30)
+## Где мы остановились (конец сессии 2026-03-31)
 
-Код написан, работает локально, запушен на GitHub (2 коммита). **Следующая задача: подготовка VDS и деплой.**
+**Сайт задеплоен и работает на http://37.230.115.104**
 
-### ТЕКУЩИЙ ПРИОРИТЕТ: Подготовка VDS (37.230.115.104)
+### Что сделано на VDS:
+1. SSH-ключ добавлен (беспарольный доступ `ssh root@37.230.115.104`)
+2. Docker 29.3.1 + Docker Compose 5.1.1 установлены
+3. UFW настроен (22, 80, 443)
+4. Проект скопирован в `/opt/vpn/` через scp (не git clone — репо приватный)
+5. Production `.env` создан с уникальными секретами
+6. `docker compose up -d` — 4 контейнера работают: nginx, backend, marzban, frontend
+7. Health check: `curl http://37.230.115.104/api/health` → `{"status":"ok","service":"Andigo"}`
 
-**Проблема:** SSH-доступ к VDS не настроен. Хостер: **FirstVDS** (firstvds.ru).
+### ТЕКУЩИЙ ПРИОРИТЕТ: Следующие шаги
 
-**Что нужно от пользователя:**
-1. Зайти в ЛК FirstVDS → Виртуальные серверы → сервер 37.230.115.104
-2. Найти **root-пароль** (раздел "Инструкция" или "Доступ", или email при создании)
-3. Скинуть пароль Claude, чтобы настроить SSH-ключ и запустить setup
+1. **Настроить DNS** — A-запись andigo.su → 37.230.115.104 (у регистратора домена)
+2. **Получить SSL** — `docker compose run certbot certonly --webroot -w /var/www/certbot -d andigo.su`
+3. **Включить HTTPS** — раскомментировать HTTPS-блок в nginx/default.conf на VDS
+4. **Настроить Telegram-бота** — получить токен у @BotFather, вписать в .env на VDS
+5. **Настроить ЮКасса** — тестовый режим, shop_id + secret_key
+6. **Настроить git на VDS** — deploy key для автообновления через `git pull`
 
-**После получения SSH-доступа, план деплоя:**
-1. Подключиться по SSH как root
-2. Добавить SSH-ключ `~/.ssh/id_ed25519.pub` на сервер (для беспарольного доступа)
-3. Запустить `deploy/scripts/setup.sh` (Docker, UFW, swap)
-4. Склонировать репо: `git clone https://github.com/IAmYourPlayboy/vpn-service.git /opt/vpn`
-5. Настроить `backend/.env` на сервере (production secrets)
-6. `cd /opt/vpn/deploy && docker compose up -d`
-7. Настроить DNS: A-запись andigo.su → 37.230.115.104
-8. Получить SSL: certbot для andigo.su
-9. Раскомментировать HTTPS-блок в nginx/default.conf
-
-### Отложенные задачи (после деплоя):
-- Настроить Telegram-бота (получить токен у @BotFather)
-- Настроить ЮКасса (тестовый режим, shop_id + secret_key)
+### Важные заметки для следующего Claude:
+- SSH подключение: `ssh root@37.230.115.104` (ключ `~/.ssh/id_ed25519`)
+- Проект на VDS: `/opt/vpn/`
+- Docker compose: `cd /opt/vpn/deploy && docker compose ...`
+- Логи: `docker compose logs backend -f`
+- Обновление: scp архив → распаковка → `docker compose up -d --build`
+- ispmanager ещё на VDS (можно удалить если нужна RAM)
+- paramiko установлен глобально в Python (был нужен для SSH с паролем)
 
 ---
 
@@ -218,4 +221,4 @@ vpn/
 | **VDS** | FirstVDS, 1 vCPU, 2 ГБ RAM, 40 ГБ SSD, Ubuntu 24.04, IP: 37.230.115.104 |
 | **Домен** | andigo.su (550 руб/год, DNS ещё не настроен) |
 | **GitHub** | IAmYourPlayboy/vpn-service (SSH, код запушен) |
-| **SSH к VDS** | **НЕ настроен** — нужен root-пароль из ЛК FirstVDS |
+| **SSH к VDS** | `ssh root@37.230.115.104` — ключ добавлен, работает |

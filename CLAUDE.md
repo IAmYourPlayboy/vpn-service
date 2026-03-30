@@ -435,11 +435,14 @@ SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3
 5. ~~Добавить seed-данные~~ -- тариф "Стандарт" (249р/мес), сервер NL, админ admin@test.com
 6. ~~Ребрендинг~~ -- VPN Service → Andigo, домен andigo.su, VDS IP 37.230.115.104, цена 249р
 
+7. ~~Подготовить VDS~~ -- Docker, UFW, SSH-ключ, проект в /opt/vpn/
+8. ~~Задеплоить на VDS~~ -- docker compose up, 4 контейнера, http://37.230.115.104 работает
+
 ### Не сделано (следующие шаги):
-7. **Настроить Telegram-бота** (получить токен у @BotFather)
-8. **Настроить ЮКасса** (тестовый режим, shop_id + secret_key)
-9. **Подготовить VDS** (запустить setup.sh на 37.230.115.104)
-10. **Задеплоить на VDS** (git clone + docker compose up)
+9. **Настроить DNS** -- A-запись andigo.su → 37.230.115.104
+10. **Получить SSL** -- certbot для andigo.su, включить HTTPS в nginx
+11. **Настроить Telegram-бота** (получить токен у @BotFather)
+12. **Настроить ЮКасса** (тестовый режим, shop_id + secret_key)
 
 ---
 
