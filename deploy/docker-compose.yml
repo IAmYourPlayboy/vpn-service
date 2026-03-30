@@ -1,0 +1,63 @@
+services:
+  # Nginx — reverse proxy + статика фронтенда
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - frontend_build:/usr/share/nginx/html:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Backend — FastAPI + Telegram-бот
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    env_file:
+      - ../backend/.env
+    expose:
+      - "8000"
+    volumes:
+      - backend_data:/app/data
+    depends_on:
+      - marzban
+    restart: unless-stopped
+
+  # Marzban — VPN-ядро
+  marzban:
+    image: gozargah/marzban:latest
+    env_file:
+      - ./marzban.env
+    volumes:
+      - marzban_data:/var/lib/marzban
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  # Frontend — только сборка статики
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    volumes:
+      - frontend_build:/usr/share/nginx/html
+
+  # Certbot — SSL-сертификаты
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+
+volumes:
+  frontend_build:
+  backend_data:
+  marzban_data:
+  certbot_conf:
+  certbot_www:

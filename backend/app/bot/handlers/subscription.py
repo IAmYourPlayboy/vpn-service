@@ -1,0 +1,120 @@
+"""Обработчик раздела «Подписка» — покупка и продление."""
+
+from aiogram import F, Router
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from sqlalchemy import select
+
+from app.bot.keyboards.main_menu import back_to_menu_keyboard, subscription_keyboard
+from app.config import settings
+from app.database import async_session
+from app.models.plan import Plan
+from app.models.subscription import Subscription
+from app.models.user import User
+from app.services.payment import create_yokassa_payment
+
+router = Router()
+
+
+@router.callback_query(F.data == "subscription")
+async def show_subscription(callback: CallbackQuery):
+    """Показать статус подписки."""
+    telegram_id = callback.from_user.id
+
+    async with async_session() as db:
+        result = await db.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            await callback.answer("❌ Аккаунт не найден", show_alert=True)
+            return
+
+        sub_result = await db.execute(
+            select(Subscription).where(
+                Subscription.user_id == user.id,
+                Subscription.status == "active",
+            )
+        )
+        sub = sub_result.scalar_one_or_none()
+
+    if sub:
+        text = (
+            "💳 <b>Подписка</b>\n\n"
+            f"✅ Статус: Активна\n"
+            f"📅 Действует до: {sub.expires_at.strftime('%d.%m.%Y')}\n"
+        )
+        keyboard = subscription_keyboard(has_active=True)
+    else:
+        text = (
+            "💳 <b>Подписка</b>\n\n"
+            "❌ У вас нет активной подписки.\n"
+        )
+        keyboard = subscription_keyboard(has_active=False)
+
+    await callback.message.edit_text(text, reply_markup=keyboard)
+    await callback.answer()
+
+
+@router.callback_query(F.data.in_({"buy_sub", "renew_sub"}))
+async def buy_or_renew(callback: CallbackQuery):
+    """Создать платёж и отправить ссылку на оплату."""
+    telegram_id = callback.from_user.id
+
+    async with async_session() as db:
+        # Находим пользователя
+        result = await db.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            await callback.answer("❌ Аккаунт не найден", show_alert=True)
+            return
+
+        # Находим активный план
+        plan_result = await db.execute(
+            select(Plan).where(Plan.is_active.is_(True)).limit(1)
+        )
+        plan = plan_result.scalar_one_or_none()
+
+        if not plan:
+            await callback.message.answer("❌ Нет доступных тарифов. Обратитесь в поддержку.")
+            await callback.answer()
+            return
+
+    # Создаём платёж в ЮКасса
+    return_url = f"https://{settings.domain}/dashboard?payment=success"
+    try:
+        payment_data = create_yokassa_payment(
+            amount=float(plan.price),
+            description=f"VPN подписка: {plan.name} ({plan.duration_days} дней)",
+            return_url=return_url,
+            metadata={
+                "user_id": str(user.id),
+                "plan_id": str(plan.id),
+            },
+        )
+    except Exception:
+        await callback.message.answer("❌ Ошибка создания платежа. Попробуйте позже.")
+        await callback.answer()
+        return
+
+    confirmation_url = payment_data.get("confirmation_url")
+    if not confirmation_url:
+        await callback.message.answer("❌ Ошибка платёжной системы. Попробуйте позже.")
+        await callback.answer()
+        return
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"💰 Оплатить {plan.price:.0f} ₽", url=confirmation_url)],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="subscription")],
+    ])
+
+    await callback.message.edit_text(
+        f"💳 <b>Оплата подписки</b>\n\n"
+        f"📦 Тариф: {plan.name}\n"
+        f"💰 Стоимость: {plan.price:.0f} ₽\n"
+        f"📅 Период: {plan.duration_days} дней\n\n"
+        "Нажмите кнопку ниже для оплаты:",
+        reply_markup=keyboard,
+    )
+    await callback.answer()

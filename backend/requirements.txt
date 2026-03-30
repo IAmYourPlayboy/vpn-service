@@ -1,0 +1,31 @@
+# FastAPI + сервер
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.19
+
+# База данных
+sqlalchemy==2.0.36
+alembic==1.14.1
+aiosqlite==0.20.0
+
+# Авторизация
+python-jose[cryptography]==3.3.0
+bcrypt>=4.0.0
+pydantic[email]==2.10.4
+pydantic-settings==2.7.1
+
+# Telegram-бот
+aiogram==3.17.0
+
+# Оплата
+yookassa==3.4.0
+
+# Marzban API клиент
+httpx==0.28.1
+
+# QR-код
+qrcode[pil]==8.0
+
+# WebSocket (уже в FastAPI/uvicorn)
+# Утилиты
+python-dotenv==1.0.1
