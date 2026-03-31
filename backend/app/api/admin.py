@@ -268,9 +268,9 @@ async def reset_password(
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    # Нельзя сбрасывать пароль owner'у (если ты не owner)
-    if user.role == "owner" and admin.role != "owner":
-        raise HTTPException(status_code=403, detail="Нельзя сбросить пароль владельцу")
+    # Support не может сбрасывать пароль owner'у и другим support'ам
+    if admin.role == "support" and user.role in ("owner", "support"):
+        raise HTTPException(status_code=403, detail="Нельзя сбросить пароль этому пользователю")
 
     new_password = secrets.token_urlsafe(12)
     user.password_hash = hash_password(new_password)
