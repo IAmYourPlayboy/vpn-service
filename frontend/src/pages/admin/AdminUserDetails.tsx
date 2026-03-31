@@ -420,7 +420,8 @@ function TabActions({ user, isOwner, onToggleVpn, onReissueKey, onResetPassword,
 
         <button
           onClick={onResetPassword}
-          className="bg-indigo-900/20 border border-indigo-800 text-indigo-400 p-3 rounded text-left font-mono hover:bg-indigo-900/30 transition-colors"
+          disabled={!isOwner && (user.role === 'support' || user.role === 'owner')}
+          className="bg-indigo-900/20 border border-indigo-800 text-indigo-400 p-3 rounded text-left font-mono hover:bg-indigo-900/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <div className="text-sm">🔒 Сбросить пароль</div>
           <div className="text-gray-600 text-xs mt-1">Новый случайный пароль</div>
