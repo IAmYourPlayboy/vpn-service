@@ -109,20 +109,20 @@ function useStaggeredAnimations() {
     // Сброс
     setTriggers([false, false, false])
 
-    // Карточка 1 — сразу
+    // Карточка 1 — через 4 сек после появления секции
     const t1 = setTimeout(() => {
       setTriggers([true, false, false])
-    }, 100)
+    }, 4000)
 
-    // Карточка 2 — через 1.5с
+    // Карточка 2 — через 1.5с после первой
     const t2 = setTimeout(() => {
       setTriggers([true, true, false])
-    }, 1600)
+    }, 5500)
 
     // Карточка 3 — ещё через 1.5с
     const t3 = setTimeout(() => {
       setTriggers([true, true, true])
-    }, 3200)
+    }, 7000)
 
     // Повтор цикла через ~15с (время на все анимации + пауза 3с)
     cycleRef.current = setTimeout(() => {

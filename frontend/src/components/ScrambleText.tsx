@@ -7,11 +7,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-const BINARY_CHARS = '01'
+const BINARY_CHARS = '0123456789ABCDEFabcdef#$%&@◆◇■□▪▫'
 const GLITCH_CHARS = '!@#$%^&*(){}[]<>?/\\|~±§£¥€¢'
 
-const ENCRYPT_SPEED = 35   // мс на символ при шифровании
-const DECRYPT_SPEED = 18   // мс на символ при расшифровке (быстрее)
+const ENCRYPT_SPEED = 18   // мс на символ при шифровании
+const DECRYPT_SPEED = 12   // мс на символ при расшифровке (быстрее)
 const HOLD_ENCRYPTED = 2500 // пауза в зашифрованном состоянии
 const HOLD_DECRYPTED = 3000 // пауза в расшифрованном состоянии
 
