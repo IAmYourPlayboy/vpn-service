@@ -37,13 +37,29 @@ async def get_current_user(
     return user
 
 
-async def get_admin_user(
+async def get_staff_user(
     user: User = Depends(get_current_user),
 ) -> User:
-    """Проверить что пользователь — админ."""
-    if not user.is_admin:
+    """Проверить что пользователь — owner или support (доступ к админке)."""
+    if user.role not in ("owner", "support"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Доступ запрещён",
         )
     return user
+
+
+async def get_owner_user(
+    user: User = Depends(get_current_user),
+) -> User:
+    """Проверить что пользователь — owner (полный доступ)."""
+    if user.role != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Доступ запрещён — только для владельца",
+        )
+    return user
+
+
+# Обратная совместимость: get_admin_user = get_staff_user
+get_admin_user = get_staff_user

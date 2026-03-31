@@ -95,4 +95,83 @@ export async function getAdminUsers(skip = 0, limit = 50) {
   return data
 }
 
+export async function banUser(userId: number) {
+  const { data } = await api.post(`/admin/users/${userId}/ban`)
+  return data
+}
+
+export async function unbanUser(userId: number) {
+  const { data } = await api.post(`/admin/users/${userId}/unban`)
+  return data
+}
+
+// Подписки (админ)
+export async function getAdminSubscriptions(status?: string, skip = 0, limit = 50) {
+  const params = new URLSearchParams({ skip: String(skip), limit: String(limit) })
+  if (status) params.set('status', status)
+  const { data } = await api.get(`/admin/subscriptions?${params}`)
+  return data
+}
+
+// Платежи (админ)
+export async function getAdminPayments(status?: string, skip = 0, limit = 50) {
+  const params = new URLSearchParams({ skip: String(skip), limit: String(limit) })
+  if (status) params.set('status', status)
+  const { data } = await api.get(`/admin/payments?${params}`)
+  return data
+}
+
+// Тарифы (админ)
+export async function getAdminPlans() {
+  const { data } = await api.get('/admin/plans')
+  return data
+}
+
+export async function createAdminPlan(plan: { name: string; price: number; duration_days: number }) {
+  const { data } = await api.post('/admin/plans', plan)
+  return data
+}
+
+export async function updateAdminPlan(id: number, plan: { name?: string; price?: number; duration_days?: number }) {
+  const { data } = await api.put(`/admin/plans/${id}`, plan)
+  return data
+}
+
+export async function toggleAdminPlan(id: number) {
+  const { data } = await api.patch(`/admin/plans/${id}/toggle`)
+  return data
+}
+
+// === Расширенная админка ===
+
+export async function getUserDetails(userId: number) {
+  const { data } = await api.get(`/admin/users/${userId}/details`)
+  return data
+}
+
+export async function toggleVpn(userId: number) {
+  const { data } = await api.post(`/admin/users/${userId}/toggle-vpn`)
+  return data
+}
+
+export async function reissueKey(userId: number) {
+  const { data } = await api.post(`/admin/users/${userId}/reissue-key`)
+  return data
+}
+
+export async function resetPassword(userId: number) {
+  const { data } = await api.post(`/admin/users/${userId}/reset-password`)
+  return data
+}
+
+export async function createUser(userData: { email: string; password: string; role: string; activate_subscription: boolean }) {
+  const { data } = await api.post('/admin/users/create', userData)
+  return data
+}
+
+export async function changeRole(userId: number, role: string) {
+  const { data } = await api.put(`/admin/users/${userId}/role`, { role })
+  return data
+}
+
 export default api

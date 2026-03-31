@@ -1,10 +1,14 @@
 /**
- * Страница входа.
+ * Страница входа — терминальный стиль ч/б.
+ * Форма слева, вращающаяся ASCII-Земля справа (desktop).
+ * Кнопка "← Назад" в левом верхнем углу.
+ * Фон: чёрный + звёзды (CSS).
  */
 
 import { FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../api/client'
+import AsciiEarth from '../components/AsciiEarth'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -29,53 +33,69 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-dark flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <Link to="/" className="text-2xl font-bold">🛡️ VPN</Link>
-          <h1 className="text-xl mt-4">Вход</h1>
+    <div className="min-h-screen bg-stars flex relative overflow-hidden">
+      {/* Кнопка "← Назад" — левый верхний угол */}
+      <Link
+        to="/"
+        className="absolute top-6 left-6 z-20 text-sm text-gray-500 hover:text-white transition-colors font-mono"
+      >
+        ← Назад
+      </Link>
+
+      {/* Форма — слева, центр по вертикали */}
+      <div className="flex-1 flex items-center justify-center px-4 z-10">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <Link to="/" className="text-2xl font-bold font-mono tracking-wider">ANDIGO</Link>
+            <h1 className="text-xl mt-4">Вход</h1>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3">
+                {error}
+              </div>
+            )}
+
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full bg-dark-card border border-dark-border px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-white font-mono text-sm"
+            />
+
+            <input
+              type="password"
+              placeholder="Пароль"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full bg-dark-card border border-dark-border px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-white font-mono text-sm"
+            />
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-white text-black hover:bg-gray-200 disabled:opacity-50 py-3 font-semibold transition-colors text-sm tracking-wide uppercase"
+            >
+              {loading ? 'Вход...' : 'Войти'}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-gray-600 mt-6">
+            Нет аккаунта?{' '}
+            <Link to="/register" className="text-white hover:underline">
+              Зарегистрироваться
+            </Link>
+          </p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full bg-dark-card border border-dark-border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
-          />
-
-          <input
-            type="password"
-            placeholder="Пароль"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full bg-dark-card border border-dark-border rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
-          />
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary hover:bg-primary/80 disabled:opacity-50 py-3 rounded-lg font-semibold transition-colors"
-          >
-            {loading ? 'Вход...' : 'Войти'}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Нет аккаунта?{' '}
-          <Link to="/register" className="text-primary hover:underline">
-            Зарегистрироваться
-          </Link>
-        </p>
+      {/* ASCII-Земля — только десктоп (>= 1024px) */}
+      <div className="hidden lg:flex items-center justify-start flex-shrink-0 pr-8 overflow-hidden">
+        <AsciiEarth className="opacity-80" />
       </div>
     </div>
   )

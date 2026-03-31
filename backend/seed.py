@@ -45,12 +45,12 @@ async def seed():
         )
         db.add(server)
 
-        # Админ-пользователь
+        # Владелец (owner)
         admin = User(
-            email="admin@test.com",
+            email="gysy545@gmail.com",
             password_hash=hash_password("admin123"),
             is_active=True,
-            is_admin=True,
+            role="owner",
         )
         db.add(admin)
 
@@ -58,7 +58,7 @@ async def seed():
         print("Seed-данные добавлены:")
         print(f"  - Тариф: {plan.name} ({plan.price} руб/{plan.duration_days} дней)")
         print(f"  - Сервер: {server.name} ({server.country})")
-        print(f"  - Админ: {admin.email} (пароль: admin123)")
+        print(f"  - Админ: {admin.email}")
 
 
 if __name__ == "__main__":

@@ -46,7 +46,7 @@ async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     db.add(user)
     await db.flush()
 
-    token = create_access_token(user.id, user.is_admin)
+    token = create_access_token(user.id, user.role)
     return TokenResponse(access_token=token)
 
 
@@ -70,7 +70,7 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
 
     # Обновляем last_login
     user.last_login = datetime.now(timezone.utc)
-    token = create_access_token(user.id, user.is_admin)
+    token = create_access_token(user.id, user.role)
     return TokenResponse(access_token=token)
 
 
@@ -102,7 +102,7 @@ async def telegram_auth(data: TelegramAuthRequest, db: AsyncSession = Depends(ge
         )
 
     user.last_login = datetime.now(timezone.utc)
-    token = create_access_token(user.id, user.is_admin)
+    token = create_access_token(user.id, user.role)
     return TokenResponse(access_token=token)
 
 

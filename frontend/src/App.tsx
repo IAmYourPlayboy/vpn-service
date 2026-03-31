@@ -4,6 +4,7 @@
 
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
+import AdminLayout from './components/AdminLayout'
 import { isAuthenticated } from './api/client'
 
 // Страницы
@@ -14,6 +15,15 @@ import Dashboard from './pages/Dashboard'
 import Servers from './pages/Servers'
 import Subscription from './pages/Subscription'
 import Settings from './pages/Settings'
+
+// Админка
+import AdminOverview from './pages/admin/AdminOverview'
+import AdminUsers from './pages/admin/AdminUsers'
+import AdminUserDetails from './pages/admin/AdminUserDetails'
+import AdminSubscriptions from './pages/admin/AdminSubscriptions'
+import AdminPayments from './pages/admin/AdminPayments'
+import AdminServers from './pages/admin/AdminServers'
+import AdminPlans from './pages/admin/AdminPlans'
 
 // Защищённый маршрут
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -43,6 +53,23 @@ export default function App() {
         <Route path="/servers" element={<Servers />} />
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/settings" element={<Settings />} />
+      </Route>
+
+      {/* Админка — внутри AdminLayout (проверка is_admin внутри лейаута) */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/admin" element={<AdminOverview />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/users/:id" element={<AdminUserDetails />} />
+        <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+        <Route path="/admin/payments" element={<AdminPayments />} />
+        <Route path="/admin/servers" element={<AdminServers />} />
+        <Route path="/admin/plans" element={<AdminPlans />} />
       </Route>
 
       {/* 404 */}

@@ -92,16 +92,16 @@ vpn/
 │       ├── api/
 │       │   ├── __init__.py
 │       │   ├── schemas.py            # Все Pydantic request/response модели
-│       │   ├── deps.py               # get_current_user (JWT), get_admin_user
+│       │   ├── deps.py               # get_current_user (JWT), get_staff_user, get_owner_user
 │       │   ├── auth.py               # /register, /login, /telegram, /me, /link-email
 │       │   ├── vpn.py                # /config (subscription link + QR)
 │       │   ├── servers.py            # CRUD серверов + cached pings
 │       │   ├── payments.py           # /create, /webhook (ЮКасса), /history
-│       │   ├── admin.py              # /stats, /users, /ban, /unban
+│       │   ├── admin.py              # Админка: CRUD юзеров, роли, VPN, подписки, тарифы
 │       │   └── ws.py                 # WebSocket /ws/servers (реалтайм пинги)
 │       ├── models/
 │       │   ├── __init__.py
-│       │   ├── user.py               # id, email?, telegram_id?, password_hash?, is_active, is_admin
+│       │   ├── user.py               # id, email?, telegram_id?, password_hash?, is_active, role
 │       │   ├── plan.py               # id, name, price, duration_days, is_active
 │       │   ├── subscription.py       # id, user_id, plan_id, marzban_username, status, expires_at
 │       │   ├── payment.py            # id, user_id, subscription_id?, amount, yokassa_payment_id, status
@@ -144,7 +144,8 @@ vpn/
 │       ├── api/
 │       │   └── client.ts             # Axios instance + JWT interceptor + все API функции
 │       ├── components/
-│       │   └── Layout.tsx             # Sidebar (desktop) + tab bar (mobile), NavLink
+│       │   ├── Layout.tsx             # Sidebar (desktop) + tab bar (mobile), NavLink
+│       │   └── AdminLayout.tsx        # Админ-лейаут: зелёный сайдбар, проверка role (owner/support)
 │       └── pages/
 │           ├── Landing.tsx            # Публичный лендинг: hero, фичи, тариф
 │           ├── Login.tsx              # Форма входа (email + пароль)
@@ -152,7 +153,15 @@ vpn/
 │           ├── Dashboard.tsx          # Дашборд: статус подписки, QR-код, конфиг
 │           ├── Servers.tsx            # Серверы: WebSocket реалтайм пинги, флаги, цвет задержки
 │           ├── Subscription.tsx       # Покупка/продление -> ЮКасса, история платежей
-│           └── Settings.tsx           # Профиль, кнопка выхода
+│           ├── Settings.tsx           # Профиль, кнопка выхода
+│           └── admin/                 # Админ-панель (owner + support)
+│               ├── AdminOverview.tsx   # Статистика: юзеры, подписки, выручка (owner)
+│               ├── AdminUsers.tsx      # Таблица юзеров: роли, TG-ссылки, создание (owner)
+│               ├── AdminUserDetails.tsx # Подробнее: VPN, подписки, платежи, действия
+│               ├── AdminSubscriptions.tsx # Все подписки с фильтрами
+│               ├── AdminPayments.tsx   # История платежей (только чтение)
+│               ├── AdminServers.tsx    # Серверы: добавить/удалить, пинги (owner)
+│               └── AdminPlans.tsx      # Тарифы: CRUD, вкл/выкл (owner)
 │
 └── deploy/                            # Docker Compose деплой
     ├── docker-compose.yml             # nginx + backend + marzban + frontend build + certbot
@@ -176,7 +185,7 @@ vpn/
 | telegram_id | BigInteger, nullable, unique | Для входа через бота |
 | password_hash | String, nullable | bcrypt (null если только Telegram) |
 | is_active | Boolean, default True | |
-| is_admin | Boolean, default False | |
+| role | String(20), default "user" | "owner" / "support" / "user" |
 | created_at | DateTime | |
 | last_login | DateTime, nullable | |
 
@@ -252,11 +261,25 @@ POST /api/payments/create    -- Создать платёж в ЮКасса
 POST /api/payments/webhook   -- Webhook от ЮКасса (автоматический callback)
 GET  /api/payments/history   -- История платежей текущего пользователя
 
-# Админка
-GET  /api/admin/stats        -- Статистика (юзеры, подписки, выручка)
-GET  /api/admin/users        -- Список пользователей
-POST /api/admin/users/{id}/ban   -- Забанить
-POST /api/admin/users/{id}/unban -- Разбанить
+# Админка — owner only
+GET  /api/admin/stats                    -- Статистика (юзеры, подписки, выручка)
+POST /api/admin/users/create             -- Создать юзера вручную (+подписка)
+PUT  /api/admin/users/{id}/role          -- Изменить роль
+POST /api/admin/users/{id}/ban           -- Забанить
+POST /api/admin/users/{id}/unban         -- Разбанить
+GET  /api/admin/plans                    -- Все тарифы
+POST /api/admin/plans                    -- Создать тариф
+PUT  /api/admin/plans/{id}               -- Обновить тариф
+PATCH /api/admin/plans/{id}/toggle       -- Вкл/выкл тариф
+
+# Админка — staff (owner + support)
+GET  /api/admin/users                    -- Список пользователей
+GET  /api/admin/users/{id}/details       -- Подробнее: VPN, подписки, платежи
+POST /api/admin/users/{id}/toggle-vpn    -- Приостановить/включить VPN
+POST /api/admin/users/{id}/reissue-key   -- Перевыпустить VPN-ключ
+POST /api/admin/users/{id}/reset-password -- Сбросить пароль
+GET  /api/admin/subscriptions            -- Все подписки (фильтр ?status=active)
+GET  /api/admin/payments                 -- Все платежи (фильтр ?status=succeeded)
 
 # Реалтайм
 WS   /ws/servers             -- WebSocket: пинги серверов каждые 5 сек
@@ -266,7 +289,9 @@ POST /api/bot/webhook        -- Telegram webhook (aiogram)
 GET  /api/health             -- Health check
 ```
 
-**Авторизация:** JWT HS256, срок жизни 7 дней. Токен в заголовке `Authorization: Bearer <token>`.
+**Авторизация:** JWT HS256, срок жизни 7 дней. Payload: `{sub, role, exp}`. Токен в заголовке `Authorization: Bearer <token>`.
+
+**Роли:** owner → support → user. Иерархия: owner видит всё, support — юзеры/подписки/платежи/VPN-управление, user — нет доступа к админке.
 
 ---
 
@@ -283,7 +308,7 @@ GET  /api/health             -- Health check
   "Подписка"   -> купить/продлить -> ссылка на оплату ЮКасса
   "Настройки"  -> профиль (email, telegram_id)
   "Помощь"     -> инструкция подключения, FAQ
-  "Админка"    -> статистика, юзеры (только owner, проверка is_admin)
+  "Админка"    -> статистика, юзеры (только owner, проверка role)
 ```
 
 ---
@@ -299,8 +324,16 @@ GET  /api/health             -- Health check
 | `/servers` | Авторизован | Servers.tsx | Серверы + реалтайм пинг (WebSocket) |
 | `/subscription` | Авторизован | Subscription.tsx | Покупка/продление, история платежей |
 | `/settings` | Авторизован | Settings.tsx | Профиль, выход |
+| `/admin` | Owner | AdminOverview.tsx | Статистика сервиса |
+| `/admin/users` | Staff | AdminUsers.tsx | Пользователи: роли, TG-ссылки, создание |
+| `/admin/users/:id` | Staff | AdminUserDetails.tsx | Подробнее: VPN, подписки, платежи, действия |
+| `/admin/subscriptions` | Staff | AdminSubscriptions.tsx | Подписки с фильтрами |
+| `/admin/payments` | Staff | AdminPayments.tsx | Платежи (только чтение) |
+| `/admin/servers` | Owner | AdminServers.tsx | Серверы: добавить/удалить |
+| `/admin/plans` | Owner | AdminPlans.tsx | Тарифы: CRUD, вкл/выкл |
 
 **Защита маршрутов:** `ProtectedRoute` в App.tsx проверяет JWT в localStorage, редирект на `/login` если нет.
+**Админ-маршруты:** `AdminLayout` проверяет `role in ["owner", "support"]` через `getMe()`, редирект на `/dashboard` если user. Пункты меню фильтруются по роли: support не видит Обзор, Серверы, Тарифы.
 
 ---
 
@@ -432,22 +465,44 @@ SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3
 2. ~~Создать первую миграцию Alembic~~ -- 5 таблиц, миграция применена
 3. ~~Запустить и протестировать локально~~ -- бэкенд и фронтенд работают
 4. ~~Исправить баги~~ -- passlib→bcrypt, type hint в bot.py, обработка ошибок в main.py
-5. ~~Добавить seed-данные~~ -- тариф "Стандарт" (249р/мес), сервер NL, админ admin@test.com
+5. ~~Добавить seed-данные~~ -- тариф "Стандарт" (249р/мес), сервер NL, админ gysy545@gmail.com
 6. ~~Ребрендинг~~ -- VPN Service → Andigo, домен andigo.su, VDS IP 37.230.115.104, цена 249р
 
 7. ~~Подготовить VDS~~ -- Docker, UFW, SSH-ключ, проект в /opt/vpn/
 8. ~~Задеплоить на VDS~~ -- docker compose up, 4 контейнера, http://37.230.115.104 работает
 
+### Выполнено (2026-03-31):
+9. ~~Настроить DNS~~ -- A-запись andigo.su → 37.230.115.104 добавлена в DNSmanager FirstVDS. Ждёт распространения (домен только что активирован)
+10. ~~Nginx конфиг обновлён~~ -- server_name andigo.su, HTTPS-блок подготовлен (закомментирован)
+11. ~~Дизайн лендинга утверждён~~ -- "ASCII Cinema / Darknet Gateway", спецификация в docs/design-spec.md
+12. ~~Юридический анализ проведён~~ -- самозанятый + ЮКасса возможен, но VPN-бизнес в серой зоне (нужна лицензия ФСБ). Решение: работать как есть, принять риски
+
+### Выполнено (2026-03-31, сессия 2):
+13. ~~Админ-панель~~ -- 6 страниц: обзор, пользователи, подписки, платежи, серверы, тарифы
+14. ~~Расширение API~~ -- новые эндпоинты: admin/subscriptions, admin/payments, admin/plans CRUD
+15. ~~Смена email админа~~ -- admin@test.com → gysy545@gmail.com в seed.py
+
+### Выполнено (2026-04-01):
+16. ~~Система ролей~~ -- is_admin → role (owner/support/user), миграция Alembic, JWT с ролью
+17. ~~Расширенная админка~~ -- подробности юзера (VPN/подписки/платежи/действия), управление VPN, сброс пароля, перевыпуск ключа, создание юзеров, смена ролей
+18. ~~Ограничение доступа~~ -- AdminLayout фильтрует меню по роли, owner-only эндпоинты защищены
+
+### Выполнено (2026-04-01, сессия 2):
+19. ~~DNS проверен~~ -- andigo.su и www.andigo.su → 37.230.115.104 (Google DNS + Cloudflare)
+20. ~~SSL получен~~ -- Let's Encrypt certbot, действует до 29.06.2026, HTTPS + HTTP→HTTPS редирект + HSTS + HTTP/2
+21. ~~Автопродление SSL~~ -- cron на VDS: каждые 12ч (03:17, 15:17) certbot renew + nginx reload
+
 ### Не сделано (следующие шаги):
-9. **Настроить DNS** -- A-запись andigo.su → 37.230.115.104
-10. **Получить SSL** -- certbot для andigo.su, включить HTTPS в nginx
-11. **Настроить Telegram-бота** (получить токен у @BotFather)
-12. **Настроить ЮКасса** (тестовый режим, shop_id + secret_key)
+22. **Реализовать новый дизайн лендинга** -- ASCII Cinema стиль (спецификация: docs/design-spec.md)
+23. **Настроить Telegram-бота** (получить токен у @BotFather)
+24. **Настроить ЮКасса** (самозанятый, тестовый режим, shop_id + secret_key)
+25. **Фаза 2: Система поддержки** -- тикеты от пользователей + FAQ/база знаний (отдельная БД)
 
 ---
 
 ## 14. Ключевые решения (не менять без обсуждения)
 
+- **3 роли: owner/support/user** -- строковое поле `role` вместо boolean `is_admin`. Owner = полный доступ, support = просмотр + VPN-управление, user = без админки
 - **SQLite, НЕ PostgreSQL** -- экономия ~100 МБ RAM на VDS
 - **Статический React через Vite** -- без Node.js на сервере, Nginx раздаёт файлы
 - **aiogram встроен в FastAPI** -- один процесс, webhook mode, экономия RAM
@@ -457,6 +512,9 @@ SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3
 - **Регистрация: email + Telegram** -- оба способа
 - **ЮКасса для оплаты** -- легитимный, SDK есть, документация полная
 - **НЕ Kassa AI** -- исследована и отклонена (нет API/SDK, связана с заблокированной FreeKassa, регистрация в Казахстане, сомнительный сервис)
+- **Дизайн: ASCII Cinema / Darknet** -- чёрный фон, ASCII-анимация (символы текут), белая типографика, darknet-вайб. Спецификация: docs/design-spec.md
+- **Юридическая формулировка** -- на сайте: "приватный доступ", "защищённое подключение". НЕ использовать: "обход блокировок", "анонимность". Слово "VPN" минимизировать
+- **Самозанятый + ЮКасса** -- решение принято, серая зона (VPN формально требует лицензию ФСБ)
 
 ---
 

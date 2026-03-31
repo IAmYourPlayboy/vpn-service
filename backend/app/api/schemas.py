@@ -38,7 +38,7 @@ class UserResponse(BaseModel):
     email: str | None
     telegram_id: int | None
     is_active: bool
-    is_admin: bool
+    role: str
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -112,3 +112,104 @@ class LinkEmailRequest(BaseModel):
 
 class LinkTelegramRequest(BaseModel):
     telegram_id: int
+
+
+# === Админка ===
+
+class AdminSubscriptionResponse(BaseModel):
+    """Подписка с данными пользователя и тарифа (для админки)."""
+    id: int
+    user_id: int
+    user_email: str | None = None
+    user_telegram_id: int | None = None
+    plan_name: str
+    marzban_username: str
+    status: str
+    started_at: datetime
+    expires_at: datetime
+    auto_renew: bool
+
+    model_config = {"from_attributes": True}
+
+
+class AdminPaymentResponse(BaseModel):
+    """Платёж с данными пользователя (для админки)."""
+    id: int
+    user_id: int
+    user_email: str | None = None
+    user_telegram_id: int | None = None
+    amount: float
+    currency: str
+    yokassa_payment_id: str | None = None
+    status: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PlanResponse(BaseModel):
+    """Тариф."""
+    id: int
+    name: str
+    price: float
+    duration_days: int
+    is_active: bool
+
+    model_config = {"from_attributes": True}
+
+
+class PlanCreateRequest(BaseModel):
+    """Создание тарифа."""
+    name: str
+    price: float
+    duration_days: int = 30
+
+
+class PlanUpdateRequest(BaseModel):
+    """Обновление тарифа (все поля опциональны)."""
+    name: str | None = None
+    price: float | None = None
+    duration_days: int | None = None
+
+
+# === Расширенная админка ===
+
+class UserDetailResponse(BaseModel):
+    """Подробная информация о пользователе (для кнопки 'Подробнее')."""
+    # Базовая инфо
+    id: int
+    email: str | None = None
+    telegram_id: int | None = None
+    role: str
+    is_active: bool
+    created_at: datetime
+    last_login: datetime | None = None
+    # VPN-данные из Marzban (nullable если нет подписки)
+    vpn_status: str | None = None
+    vpn_username: str | None = None
+    subscription_url: str | None = None
+    used_traffic_bytes: int | None = None
+    data_limit_bytes: int | None = None
+    # Связанные данные
+    subscriptions: list[SubscriptionResponse] = []
+    payments: list[PaymentResponse] = []
+
+    model_config = {"from_attributes": True}
+
+
+class CreateUserRequest(BaseModel):
+    """Ручное создание пользователя (owner only)."""
+    email: EmailStr
+    password: str
+    role: str = "user"
+    activate_subscription: bool = False
+
+
+class ChangeRoleRequest(BaseModel):
+    """Изменение роли пользователя."""
+    role: str  # "owner", "support", "user"
+
+
+class ResetPasswordResponse(BaseModel):
+    """Ответ на сброс пароля — новый пароль показывается один раз."""
+    new_password: str
