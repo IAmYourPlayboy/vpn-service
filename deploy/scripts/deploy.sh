@@ -1,27 +1,24 @@
 #!/bin/bash
-# Обновление VPN-сервиса на VDS
-# Запускать: bash deploy.sh
+# Деплой Andigo VPN-сервиса на VDS
+# Запуск: bash /opt/vpn/deploy/scripts/deploy.sh
+# Код обновляется через scp/tar с локальной машины (git на VDS не используется)
 
 set -e
 
 DEPLOY_DIR="/opt/vpn/deploy"
 
-echo "=== Деплой VPN-сервиса ==="
+echo "=== Деплой Andigo ==="
 
-cd /opt/vpn
-
-# Подтягиваем изменения
-echo ">>> Git pull..."
-git pull origin main
+cd "$DEPLOY_DIR"
 
 # Пересобираем контейнеры
 echo ">>> Сборка контейнеров..."
-cd "$DEPLOY_DIR"
-docker compose build
+docker compose build --no-cache frontend backend
 
-# Перезапускаем
+# Пересоздаём frontend + nginx (чтобы свежая сборка попала в volume)
 echo ">>> Перезапуск..."
-docker compose up -d
+docker compose up -d --force-recreate frontend
+docker compose up -d --force-recreate nginx backend
 
 # Проверяем
 echo ">>> Статус контейнеров:"

@@ -11,7 +11,10 @@ services:
       - certbot_conf:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   # Backend — FastAPI + Telegram-бот
@@ -40,7 +43,8 @@ services:
       - "8080"
     restart: unless-stopped
 
-  # Frontend — только сборка статики
+  # Frontend — сборка и копирование статики в volume
+  # Контейнер запускается, копирует свежую сборку и завершается
   frontend:
     build:
       context: ../frontend
