@@ -9,7 +9,7 @@ import { getMe, logout } from '../api/client'
 
 const navItems = [
   { to: '/dashboard', icon: '[~]', label: 'Главная' },
-  { to: '/servers',   icon: '[>]', label: 'Серверы' },
+  { to: '/servers',   icon: '[S]', label: 'Серверы' },
   { to: '/subscription', icon: '[$]', label: 'Подписка' },
   { to: '/settings',  icon: '[*]', label: 'Настройки' },
 ]
@@ -92,6 +92,19 @@ export default function Layout() {
             <span>{item.label}</span>
           </NavLink>
         ))}
+        {(role === 'owner' || role === 'support') && (
+          <NavLink
+            to="/admin"
+            className={({ isActive }) =>
+              `flex flex-col items-center text-[10px] py-1 px-3 font-mono ${
+                isActive ? 'text-white' : 'text-gray-600'
+              }`
+            }
+          >
+            <span className="text-xs mb-0.5">[⚙]</span>
+            <span>{role === 'owner' ? 'Админ' : 'Панель'}</span>
+          </NavLink>
+        )}
       </nav>
     </div>
   )
