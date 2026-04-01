@@ -48,6 +48,7 @@ async def seed():
         # Владелец (owner)
         admin = User(
             email="gysy545@gmail.com",
+            telegram_id=1558594007,
             password_hash=hash_password("admin123"),
             is_active=True,
             role="owner",

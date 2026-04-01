@@ -14,6 +14,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, nullable=True)
+    nickname: Mapped[str | None] = mapped_column(String(50), nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     role: Mapped[str] = mapped_column(String(20), server_default=text("'user'"))

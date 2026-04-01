@@ -17,13 +17,17 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Если 401 — разлогиниваем
+// Если 401 — удаляем токен. Редирект только если не на публичной странице
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      // Не перенаправляем с публичных страниц (лендинг, логин, регистрация)
+      const publicPaths = ['/', '/login', '/register']
+      if (!publicPaths.includes(window.location.pathname)) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
@@ -55,6 +59,13 @@ export function logout() {
 
 export function isAuthenticated(): boolean {
   return !!localStorage.getItem('token')
+}
+
+// === Профиль ===
+
+export async function updateProfile(data: { nickname?: string }) {
+  const { data: result } = await api.put('/auth/profile', data)
+  return result
 }
 
 // === VPN ===

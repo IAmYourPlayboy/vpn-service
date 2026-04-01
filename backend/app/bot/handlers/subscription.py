@@ -7,6 +7,7 @@ from sqlalchemy import select
 from app.bot.keyboards.main_menu import back_to_menu_keyboard, subscription_keyboard
 from app.config import settings
 from app.database import async_session
+from app.models.payment import Payment
 from app.models.plan import Plan
 from app.models.subscription import Subscription
 from app.models.user import User
@@ -116,5 +117,55 @@ async def buy_or_renew(callback: CallbackQuery):
         f"📅 Период: {plan.duration_days} дней\n\n"
         "Нажмите кнопку ниже для оплаты:",
         reply_markup=keyboard,
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "payment_history")
+async def show_payment_history(callback: CallbackQuery):
+    """Показать историю платежей пользователя."""
+    telegram_id = callback.from_user.id
+
+    async with async_session() as db:
+        result = await db.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            await callback.answer("❌ Аккаунт не найден", show_alert=True)
+            return
+
+        payments_result = await db.execute(
+            select(Payment)
+            .where(Payment.user_id == user.id)
+            .order_by(Payment.created_at.desc())
+            .limit(10)
+        )
+        payments = payments_result.scalars().all()
+
+    if not payments:
+        await callback.message.edit_text(
+            "📜 <b>История платежей</b>\n\n"
+            "Платежей пока нет.",
+            reply_markup=back_to_menu_keyboard(),
+        )
+        await callback.answer()
+        return
+
+    status_map = {
+        "pending": "⏳ Ожидание",
+        "succeeded": "✅ Оплачен",
+        "cancelled": "❌ Отменён",
+    }
+
+    lines = ["📜 <b>История платежей</b>\n"]
+    for p in payments:
+        status = status_map.get(p.status, p.status)
+        date = p.created_at.strftime("%d.%m.%Y")
+        lines.append(f"{status} — {float(p.amount):.0f} ₽ ({date})")
+
+    await callback.message.edit_text(
+        "\n".join(lines),
+        reply_markup=back_to_menu_keyboard(),
     )
     await callback.answer()

@@ -37,8 +37,9 @@ async def cmd_start(message: Message):
                 reply_markup=main_menu_keyboard(),
             )
         else:
+            is_staff = user.role in ("owner", "support")
             await message.answer(
                 "👋 <b>С возвращением!</b>\n\n"
                 "Выбери действие:",
-                reply_markup=main_menu_keyboard(),
+                reply_markup=main_menu_keyboard(is_staff=is_staff),
             )

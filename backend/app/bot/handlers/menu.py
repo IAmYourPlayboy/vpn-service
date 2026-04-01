@@ -14,9 +14,20 @@ router = Router()
 @router.callback_query(F.data == "main_menu")
 async def show_main_menu(callback: CallbackQuery):
     """Вернуться в главное меню."""
+    telegram_id = callback.from_user.id
+    is_staff = False
+
+    async with async_session() as db:
+        result = await db.execute(
+            select(User).where(User.telegram_id == telegram_id)
+        )
+        user = result.scalar_one_or_none()
+        if user:
+            is_staff = user.role in ("owner", "support")
+
     await callback.message.edit_text(
         "🏠 <b>Главное меню</b>\n\nВыбери действие:",
-        reply_markup=main_menu_keyboard(),
+        reply_markup=main_menu_keyboard(is_staff=is_staff),
     )
     await callback.answer()
 
@@ -32,7 +43,7 @@ async def show_admin_menu(callback: CallbackQuery):
         )
         user = result.scalar_one_or_none()
 
-        if not user or not user.is_admin:
+        if not user or user.role not in ("owner", "support"):
             await callback.answer("⛔ Доступ запрещён", show_alert=True)
             return
 

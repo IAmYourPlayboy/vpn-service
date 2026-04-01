@@ -3,9 +3,9 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 
-def main_menu_keyboard() -> InlineKeyboardMarkup:
-    """Главное меню бота."""
-    return InlineKeyboardMarkup(inline_keyboard=[
+def main_menu_keyboard(is_staff: bool = False) -> InlineKeyboardMarkup:
+    """Главное меню бота. is_staff=True добавляет кнопку Админки."""
+    buttons = [
         [InlineKeyboardButton(text="🔑 Мой VPN", callback_data="my_vpn")],
         [InlineKeyboardButton(text="🌍 Серверы", callback_data="servers")],
         [InlineKeyboardButton(text="💳 Подписка", callback_data="subscription")],
@@ -13,7 +13,10 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="⚙️ Настройки", callback_data="settings"),
             InlineKeyboardButton(text="❓ Помощь", callback_data="help"),
         ],
-    ])
+    ]
+    if is_staff:
+        buttons.append([InlineKeyboardButton(text="👑 Админка", callback_data="admin_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def admin_menu_keyboard() -> InlineKeyboardMarkup:

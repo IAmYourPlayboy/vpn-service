@@ -54,7 +54,7 @@ export default function Subscription() {
         <button
           onClick={handleBuy}
           disabled={loading}
-          className="bg-accent hover:bg-accent/80 disabled:opacity-50 px-6 py-3 rounded-lg font-semibold transition-colors"
+          className="bg-accent hover:bg-accent/80 disabled:opacity-50 px-6 py-3 rounded-lg font-semibold transition-colors text-black"
         >
           {loading ? 'Создание платежа...' : '💳 Купить / Продлить'}
         </button>

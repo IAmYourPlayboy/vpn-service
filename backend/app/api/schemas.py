@@ -37,11 +37,18 @@ class UserResponse(BaseModel):
     id: int
     email: str | None
     telegram_id: int | None
+    nickname: str | None = None
     is_active: bool
     role: str
     created_at: datetime
+    has_active_subscription: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class UpdateProfileRequest(BaseModel):
+    """Обновление профиля пользователя."""
+    nickname: str | None = None
 
 
 # === Подписки ===

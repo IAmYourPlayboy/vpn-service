@@ -183,6 +183,7 @@ vpn/
 | id | Integer PK | |
 | email | String, nullable, unique | Для входа через сайт |
 | telegram_id | BigInteger, nullable, unique | Для входа через бота |
+| nickname | String(50), nullable | Отображаемое имя (задаётся в настройках) |
 | password_hash | String, nullable | bcrypt (null если только Telegram) |
 | is_active | Boolean, default True | |
 | role | String(20), default "user" | "owner" / "support" / "user" |
@@ -245,7 +246,8 @@ vpn/
 POST /api/auth/register     -- Регистрация (email + пароль)
 POST /api/auth/login        -- Вход (email + пароль -> JWT)
 POST /api/auth/telegram     -- Вход через Telegram Login Widget
-GET  /api/auth/me           -- Текущий пользователь
+GET  /api/auth/me           -- Текущий пользователь (+ has_active_subscription)
+PUT  /api/auth/profile      -- Обновить профиль (nickname)
 POST /api/auth/link-email   -- Привязать email к аккаунту
 
 # VPN
@@ -292,6 +294,24 @@ GET  /api/health             -- Health check
 **Авторизация:** JWT HS256, срок жизни 7 дней. Payload: `{sub, role, exp}`. Токен в заголовке `Authorization: Bearer <token>`.
 
 **Роли:** owner → support → user. Иерархия: owner видит всё, support — юзеры/подписки/платежи/VPN-управление, user — нет доступа к админке.
+
+**Разграничение доступа по ролям:**
+
+| Функция | Owner | Support | User |
+|---------|-------|---------|------|
+| Обзор (статистика) | Полный | Ограниченный | — |
+| Пользователи (список) | Полный + создание | Просмотр + бан | — |
+| Подробности юзера | Полный | Просмотр + VPN | — |
+| Подписки | Просмотр | Просмотр | — |
+| Платежи | Просмотр | Просмотр | — |
+| Серверы | CRUD | — | — |
+| Тарифы | CRUD + вкл/выкл | — | — |
+| Смена ролей | Да | — | — |
+| Создание юзеров | Да | — | — |
+| Сброс пароля | Да | — | — |
+| VPN toggle/reissue | Да | Да | — |
+| Личный кабинет | Да | Да | Да |
+| Редактирование профиля | Да | Да | Да |
 
 ---
 
@@ -492,11 +512,25 @@ SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3
 20. ~~SSL получен~~ -- Let's Encrypt certbot, действует до 29.06.2026, HTTPS + HTTP→HTTPS редирект + HSTS + HTTP/2
 21. ~~Автопродление SSL~~ -- cron на VDS: каждые 12ч (03:17, 15:17) certbot renew + nginx reload
 
+### Выполнено (2026-04-01, сессия 3):
+22. ~~Никнейм пользователя~~ -- поле nickname в модели User, Alembic миграция, PUT /api/auth/profile, редактирование в Settings
+23. ~~Лендинг для авторизованных~~ -- хедер показывает имя/email вместо "Войти/Получить", CTA-кнопка "ВЫ ПОДКЛЮЧЕНЫ" (зелёная) если есть подписка, иначе ведёт на /subscription
+24. ~~Фикс вылета аккаунта на лендинге~~ -- 401 interceptor не перенаправляет с публичных страниц (/, /login, /register)
+25. ~~Фикс дёргания мобильных блоков~~ -- фиксированная высота текста в карточках фич (h-[4.5rem] overflow-hidden)
+26. ~~Иконки откат~~ -- [S] → [>] для серверов, [⬅] → [←] для стрелки назад
+27. ~~Toggle видимости пароля~~ -- кнопка [●]/[○] на Login и Register
+28. ~~Цвет текста кнопки подписки~~ -- text-black на кнопке "Купить / Продлить"
+29. ~~Привязка Telegram~~ -- в Settings: "Не привязан. Привязать" → ссылка на t.me/andigo_bot
+30. ~~Elastic overscroll~~ -- мобильный таб-бар тянется и пружинит при свайпе (Samsung-like)
+31. ~~Документация ролей~~ -- таблица разграничения доступа owner/support/user в CLAUDE.md
+32. ~~Никнейм в Dashboard~~ -- приветствие whoami показывает nickname > email > "пользователь"
+33. ~~has_active_subscription~~ -- добавлен в /api/auth/me для проверки подписки на лендинге
+
 ### Не сделано (следующие шаги):
-22. **Реализовать новый дизайн лендинга** -- ASCII Cinema стиль (спецификация: docs/design-spec.md)
-23. **Настроить Telegram-бота** (получить токен у @BotFather)
-24. **Настроить ЮКасса** (самозанятый, тестовый режим, shop_id + secret_key)
-25. **Фаза 2: Система поддержки** -- тикеты от пользователей + FAQ/база знаний (отдельная БД)
+34. **Реализовать новый дизайн лендинга** -- ASCII Cinema стиль (спецификация: docs/design-spec.md)
+35. **Настроить Telegram-бота** (получить токен у @BotFather)
+36. **Настроить ЮКасса** (самозанятый, тестовый режим, shop_id + secret_key)
+37. **Фаза 2: Система поддержки** -- тикеты от пользователей + FAQ/база знаний (отдельная БД)
 
 ---
 

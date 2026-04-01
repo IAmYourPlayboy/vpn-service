@@ -13,9 +13,11 @@ from app.api.schemas import (
     RegisterRequest,
     TelegramAuthRequest,
     TokenResponse,
+    UpdateProfileRequest,
     UserResponse,
 )
 from app.database import get_db
+from app.models.subscription import Subscription
 from app.models.user import User
 from app.services.auth import (
     create_access_token,
@@ -107,9 +109,63 @@ async def telegram_auth(data: TelegramAuthRequest, db: AsyncSession = Depends(ge
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(user: User = Depends(get_current_user)):
-    """Получить данные текущего пользователя."""
-    return user
+async def get_me(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Получить данные текущего пользователя + статус подписки."""
+    # Проверяем наличие активной подписки
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.user_id == user.id,
+            Subscription.status == "active",
+        )
+    )
+    has_sub = result.scalar_one_or_none() is not None
+
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        telegram_id=user.telegram_id,
+        nickname=user.nickname,
+        is_active=user.is_active,
+        role=user.role,
+        created_at=user.created_at,
+        has_active_subscription=has_sub,
+    )
+
+
+@router.put("/profile", response_model=UserResponse)
+async def update_profile(
+    data: UpdateProfileRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Обновить профиль пользователя (nickname)."""
+    if data.nickname is not None:
+        # Очистка: пустая строка → None
+        user.nickname = data.nickname.strip() or None
+    await db.flush()
+
+    # Вернуть обновлённые данные с подпиской
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.user_id == user.id,
+            Subscription.status == "active",
+        )
+    )
+    has_sub = result.scalar_one_or_none() is not None
+
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        telegram_id=user.telegram_id,
+        nickname=user.nickname,
+        is_active=user.is_active,
+        role=user.role,
+        created_at=user.created_at,
+        has_active_subscription=has_sub,
+    )
 
 
 @router.post("/link-email")

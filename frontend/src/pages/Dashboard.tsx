@@ -13,8 +13,9 @@ interface User {
   id: number
   email: string | null
   telegram_id: number | null
+  nickname: string | null
   is_active: boolean
-  is_admin: boolean
+  role: string
 }
 
 interface VPNConfig {
@@ -79,7 +80,7 @@ export default function Dashboard() {
     return 'text-red-400'
   }
 
-  const userName = user?.email || 'пользователь'
+  const userName = user?.nickname || user?.email || 'пользователь'
 
   return (
     <div>

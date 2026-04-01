@@ -3,9 +3,10 @@
 import logging
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from app.bot.handlers import menu, start, vpn_handler, subscription, settings_handler, admin_handler, help_handler
+from app.bot.handlers import menu, start, vpn_handler, subscription, settings_handler, admin_handler, help_handler, servers_handler
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,10 @@ def create_bot() -> tuple[Bot | None, Dispatcher | None]:
         logger.warning("TELEGRAM_BOT_TOKEN не задан — бот не запущен")
         return None, None
 
-    bot = Bot(token=settings.telegram_bot_token, parse_mode=ParseMode.HTML)
+    bot = Bot(
+        token=settings.telegram_bot_token,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
     dp = Dispatcher()
 
     # Регистрируем обработчики
@@ -32,6 +36,7 @@ def create_bot() -> tuple[Bot | None, Dispatcher | None]:
     dp.include_router(subscription.router)
     dp.include_router(settings_handler.router)
     dp.include_router(help_handler.router)
+    dp.include_router(servers_handler.router)
     dp.include_router(admin_handler.router)
 
     logger.info("Telegram-бот инициализирован")

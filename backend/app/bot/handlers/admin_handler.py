@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from app.bot.keyboards.main_menu import admin_menu_keyboard, back_to_menu_keyboard
 from app.database import async_session
 from app.models.payment import Payment
+from app.models.server import Server
 from app.models.subscription import Subscription
 from app.models.user import User
 
@@ -14,13 +15,13 @@ router = Router()
 
 
 async def _check_admin(telegram_id: int) -> bool:
-    """Проверить что пользователь — админ."""
+    """Проверить что пользователь — staff (owner или support)."""
     async with async_session() as db:
         result = await db.execute(
             select(User).where(User.telegram_id == telegram_id)
         )
         user = result.scalar_one_or_none()
-        return user is not None and user.is_admin
+        return user is not None and user.role in ("owner", "support")
 
 
 @router.callback_query(F.data == "admin_stats")
@@ -68,6 +69,41 @@ async def admin_users(callback: CallbackQuery):
         status = "✅" if u.is_active else "🚫"
         ident = u.email or f"TG:{u.telegram_id}"
         lines.append(f"{status} #{u.id} — {ident}")
+
+    await callback.message.edit_text(
+        "\n".join(lines),
+        reply_markup=admin_menu_keyboard(),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "admin_servers")
+async def admin_servers(callback: CallbackQuery):
+    """Список серверов для админа."""
+    if not await _check_admin(callback.from_user.id):
+        await callback.answer("⛔ Доступ запрещён", show_alert=True)
+        return
+
+    async with async_session() as db:
+        result = await db.execute(select(Server).order_by(Server.id))
+        servers = result.scalars().all()
+
+    if not servers:
+        await callback.message.edit_text(
+            "🌐 <b>Серверы</b>\n\nСерверы не добавлены.",
+            reply_markup=admin_menu_keyboard(),
+        )
+        await callback.answer()
+        return
+
+    lines = ["🌐 <b>Серверы</b>\n"]
+    for s in servers:
+        active = "✅" if s.is_active else "🚫"
+        ping = f"{s.last_ping_ms} мс" if s.last_ping_ms else "—"
+        lines.append(
+            f"{active} <b>{s.name}</b> ({s.country})\n"
+            f"   Хост: <code>{s.host}</code> | Пинг: {ping} | Статус: {s.ping_status}"
+        )
 
     await callback.message.edit_text(
         "\n".join(lines),

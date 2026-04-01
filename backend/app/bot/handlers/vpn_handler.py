@@ -2,6 +2,7 @@
 
 import base64
 import io
+from datetime import datetime
 
 from aiogram import F, Router
 from aiogram.types import BufferedInputFile, CallbackQuery
@@ -52,7 +53,7 @@ async def show_vpn(callback: CallbackQuery):
         return
 
     # Формируем текст статуса
-    days_left = (sub.expires_at - sub.started_at).days
+    days_left = max(0, (sub.expires_at - datetime.utcnow()).days)
     text = (
         "🔑 <b>Мой VPN</b>\n\n"
         f"✅ Подписка активна\n"
@@ -120,5 +121,30 @@ async def send_qr_code(callback: CallbackQuery):
     await callback.message.answer_photo(
         photo,
         caption="📱 <b>QR-код VPN</b>\n\nОтсканируйте в приложении WireGuard / V2rayNG / Hiddify",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "download_config")
+async def download_config(callback: CallbackQuery):
+    """Отправить ссылку подписки как текстовый файл."""
+    user, sub = await _get_user_and_sub(callback.from_user.id)
+
+    if not sub:
+        await callback.answer("❌ Нет активной подписки", show_alert=True)
+        return
+
+    sub_link = await marzban_client.get_subscription_link(sub.marzban_username)
+    if not sub_link:
+        await callback.message.answer("❌ Не удалось получить конфиг.")
+        await callback.answer()
+        return
+
+    # Отправляем ссылку как текстовый файл
+    file_content = sub_link.encode("utf-8")
+    document = BufferedInputFile(file_content, filename="andigo_vpn.txt")
+    await callback.message.answer_document(
+        document,
+        caption="📥 <b>Конфиг VPN</b>\n\nОткройте файл в приложении VPN-клиента.",
     )
     await callback.answer()

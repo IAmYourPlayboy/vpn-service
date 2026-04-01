@@ -6,11 +6,18 @@
 
 import { Link } from 'react-router-dom'
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { isAuthenticated, getMe } from '../api/client'
 import AsciiRain from '../components/AsciiRain'
 import TypingText from '../components/TypingText'
 import ScrambleText from '../components/ScrambleText'
 import SpeedDemo from '../components/SpeedDemo'
 import MultiLangText from '../components/MultiLangText'
+
+interface AuthUser {
+  nickname: string | null
+  email: string | null
+  has_active_subscription: boolean
+}
 
 // Block/Shadow ASCII-иконки (█▓▒░ стиль)
 const ASCII_LOCK = `     ▄██▄
@@ -148,7 +155,24 @@ function useStaggeredAnimations() {
 
 export default function Landing() {
   const [scrolled, setScrolled] = useState(false)
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
   const { triggers, sectionRef } = useStaggeredAnimations()
+
+  // Проверяем авторизацию — без вызова logout при ошибке
+  useEffect(() => {
+    if (isAuthenticated()) {
+      getMe()
+        .then((u) => setAuthUser({
+          nickname: u.nickname,
+          email: u.email,
+          has_active_subscription: u.has_active_subscription,
+        }))
+        .catch(() => {
+          // Токен невалидный — просто не показываем авторизованный UI
+          setAuthUser(null)
+        })
+    }
+  }, [])
 
   // Фиксированный хедер: backdrop-blur при скролле
   useEffect(() => {
@@ -171,18 +195,29 @@ export default function Landing() {
           ANDIGO
         </Link>
         <div className="flex items-center gap-4">
-          <Link
-            to="/login"
-            className="text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            Войти
-          </Link>
-          <Link
-            to="/register"
-            className="btn-terminal text-sm px-5 py-2 tracking-wide uppercase"
-          >
-            Получить
-          </Link>
+          {authUser ? (
+            <Link
+              to="/dashboard"
+              className="text-sm text-white hover:text-gray-300 transition-colors font-mono"
+            >
+              {authUser.nickname || authUser.email || 'Личный кабинет'}
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                Войти
+              </Link>
+              <Link
+                to="/register"
+                className="btn-terminal text-sm px-5 py-2 tracking-wide uppercase"
+              >
+                Получить
+              </Link>
+            </>
+          )}
         </div>
       </header>
 
@@ -202,12 +237,21 @@ export default function Landing() {
           </p>
 
           {/* CTA */}
-          <Link
-            to="/register"
-            className="btn-terminal inline-block px-10 py-4 text-sm tracking-[0.25em] uppercase font-medium"
-          >
-            Подключиться
-          </Link>
+          {authUser?.has_active_subscription ? (
+            <Link
+              to="/dashboard"
+              className="inline-block px-10 py-4 text-sm tracking-[0.25em] uppercase font-medium border-2 border-green-400 text-green-400 hover:bg-green-400/10 transition-colors"
+            >
+              Вы подключены
+            </Link>
+          ) : (
+            <Link
+              to={authUser ? '/subscription' : '/register'}
+              className="btn-terminal inline-block px-10 py-4 text-sm tracking-[0.25em] uppercase font-medium"
+            >
+              Подключиться
+            </Link>
+          )}
         </div>
 
         {/* Scroll hint — стрелка вниз */}
@@ -229,13 +273,13 @@ export default function Landing() {
                 {ASCII_LOCK}
               </pre>
               <h3 className="text-lg font-semibold mb-2">Шифрование трафика</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">
+              <div className="text-gray-500 text-sm leading-relaxed h-[4.5rem] overflow-hidden">
                 <ScrambleText
                   text="Надёжное шифрование защищает ваши данные от перехвата. Современные протоколы обеспечивают безопасность соединения."
                   active={triggers[0]}
                   mode="binary"
                 />
-              </p>
+              </div>
             </div>
 
             {/* Карточка 2: Скорость — быстрая печать + пинг */}
@@ -244,9 +288,9 @@ export default function Landing() {
                 {ASCII_BOLT}
               </pre>
               <h3 className="text-lg font-semibold mb-2">Высокая скорость</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">
+              <div className="text-gray-500 text-sm leading-relaxed h-[4.5rem] overflow-hidden">
                 <SpeedDemo trigger={triggers[1]} />
-              </p>
+              </div>
             </div>
 
             {/* Карточка 3: Серверы — смена языков */}
@@ -255,9 +299,9 @@ export default function Landing() {
                 {ASCII_RACK}
               </pre>
               <h3 className="text-lg font-semibold mb-2">Серверы в нескольких странах</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">
+              <div className="text-gray-500 text-sm leading-relaxed h-[4.5rem] overflow-hidden">
                 <MultiLangText trigger={triggers[2]} />
-              </p>
+              </div>
             </div>
           </div>
         </section>
@@ -285,12 +329,18 @@ export default function Landing() {
                 <div><span className="text-gray-600">&gt;</span> поддержка 24/7</div>
               </div>
 
-              <Link
-                to="/register"
-                className="btn-terminal block text-center py-3 text-sm tracking-[0.2em] uppercase font-medium"
-              >
-                Получить
-              </Link>
+              {authUser?.has_active_subscription ? (
+                <div className="block text-center py-3 text-sm tracking-[0.2em] uppercase font-medium border-2 border-green-400 text-green-400">
+                  Вы подключены
+                </div>
+              ) : (
+                <Link
+                  to={authUser ? '/subscription' : '/register'}
+                  className="btn-terminal block text-center py-3 text-sm tracking-[0.2em] uppercase font-medium"
+                >
+                  {authUser ? 'Оформить подписку' : 'Получить'}
+                </Link>
+              )}
             </div>
           </div>
         </section>

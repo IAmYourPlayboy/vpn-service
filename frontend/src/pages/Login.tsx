@@ -13,6 +13,7 @@ import AsciiEarth from '../components/AsciiEarth'
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
@@ -66,14 +67,24 @@ export default function Login() {
               className="w-full bg-dark-card border border-dark-border px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-white font-mono text-sm"
             />
 
-            <input
-              type="password"
-              placeholder="Пароль"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full bg-dark-card border border-dark-border px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-white font-mono text-sm"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Пароль"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full bg-dark-card border border-dark-border px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:border-white font-mono text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors font-mono text-xs"
+                tabIndex={-1}
+              >
+                {showPassword ? '[○]' : '[●]'}
+              </button>
+            </div>
 
             <button
               type="submit"
