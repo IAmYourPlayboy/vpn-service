@@ -47,18 +47,25 @@ export default function Layout() {
               )}
             </NavLink>
           ))}
+          {(role === 'owner' || role === 'support') && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-3 py-2 text-sm font-mono transition-colors ${
+                  isActive
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-500 hover:text-green-400 hover:bg-white/5'
+                }`
+              }
+            >
+              <span className="text-white/30 w-8 text-xs">[⚙]</span>
+              <span>{role === 'owner' ? 'Админ панель' : 'Рабочая панель'}</span>
+            </NavLink>
+          )}
         </nav>
-        {(role === 'owner' || role === 'support') && (
-          <NavLink
-            to="/admin"
-            className="text-sm text-gray-600 hover:text-green-400 mt-4 text-left px-3 py-2 font-mono transition-colors"
-          >
-            <span className="text-white/30 text-xs">[⚙]</span> {role === 'owner' ? 'Админ панель' : 'Рабочая панель'}
-          </NavLink>
-        )}
         <button
           onClick={logout}
-          className={`text-sm text-gray-600 hover:text-red-400 ${role === 'owner' || role === 'support' ? 'mt-1' : 'mt-4'} text-left px-3 py-2 font-mono transition-colors`}
+          className="text-sm text-gray-600 hover:text-red-400 mt-4 text-left px-3 py-2 font-mono transition-colors"
         >
           <span className="text-white/30 text-xs">[x]</span> Выйти
         </button>
