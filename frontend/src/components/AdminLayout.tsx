@@ -9,7 +9,7 @@ import { getMe, logout } from '../api/client'
 
 // Все пункты меню, ownerOnly отмечает доступ только для owner
 const allNavItems = [
-  { to: '/admin',              icon: '[~]', label: 'Обзор',        end: true,  ownerOnly: true },
+  { to: '/admin',              icon: '[~]', label: 'Обзор',        end: true,  ownerOnly: false },
   { to: '/admin/users',        icon: '[U]', label: 'Пользователи', end: false, ownerOnly: false },
   { to: '/admin/subscriptions', icon: '[S]', label: 'Подписки',    end: false, ownerOnly: false },
   { to: '/admin/payments',     icon: '[P]', label: 'Платежи',      end: false, ownerOnly: false },
@@ -40,7 +40,9 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-dark flex flex-col md:flex-row">
       {/* Сайдбар — десктоп */}
       <aside className="hidden md:flex flex-col w-56 bg-dark-card border-r border-dark-border p-4">
-        <div className="text-xl font-bold mb-2 font-mono tracking-wider text-green-400">ADMIN</div>
+        <div className="text-xl font-bold mb-2 font-mono tracking-wider text-green-400">
+          {role === 'support' ? 'SUPPORT' : 'ADMIN'}
+        </div>
         <div className="text-xs text-gray-600 font-mono mb-6 truncate">{email}</div>
         <nav className="flex flex-col gap-1 flex-1">
           {navItems.map((item) => (
