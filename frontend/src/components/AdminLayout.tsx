@@ -71,7 +71,7 @@ export default function AdminLayout() {
           to="/dashboard"
           className="text-sm text-gray-600 hover:text-white mt-4 text-left px-3 py-2 font-mono transition-colors"
         >
-          <span className="text-white/30 text-xs">[←]</span> На сайт
+          <span className="text-white/30 text-xs">[←]</span> Вернуться в ЛК
         </NavLink>
         <button
           onClick={logout}

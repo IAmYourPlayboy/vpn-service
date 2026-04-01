@@ -4,7 +4,8 @@
  */
 
 import { NavLink, Outlet } from 'react-router-dom'
-import { logout } from '../api/client'
+import { useEffect, useState } from 'react'
+import { getMe, logout } from '../api/client'
 
 const navItems = [
   { to: '/dashboard', icon: '[~]', label: 'Главная' },
@@ -14,6 +15,12 @@ const navItems = [
 ]
 
 export default function Layout() {
+  const [role, setRole] = useState<string>('user')
+
+  useEffect(() => {
+    getMe().then((u) => setRole(u.role)).catch(() => {})
+  }, [])
+
   return (
     <div className="min-h-screen bg-dark flex flex-col md:flex-row">
       {/* Сайдбар — десктоп */}
@@ -41,9 +48,17 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+        {(role === 'owner' || role === 'support') && (
+          <NavLink
+            to="/admin"
+            className="text-sm text-gray-600 hover:text-green-400 mt-4 text-left px-3 py-2 font-mono transition-colors"
+          >
+            <span className="text-white/30 text-xs">[⚙]</span> {role === 'owner' ? 'Админ панель' : 'Рабочая панель'}
+          </NavLink>
+        )}
         <button
           onClick={logout}
-          className="text-sm text-gray-600 hover:text-red-400 mt-4 text-left px-3 py-2 font-mono transition-colors"
+          className={`text-sm text-gray-600 hover:text-red-400 ${role === 'owner' || role === 'support' ? 'mt-1' : 'mt-4'} text-left px-3 py-2 font-mono transition-colors`}
         >
           <span className="text-white/30 text-xs">[x]</span> Выйти
         </button>
