@@ -20,6 +20,11 @@ echo ">>> Перезапуск..."
 docker compose up -d --force-recreate frontend
 docker compose up -d --force-recreate nginx backend
 
+# Применяем миграции БД (после старта backend)
+echo ">>> Миграции БД..."
+sleep 3
+docker compose exec -e PYTHONPATH=/app backend alembic upgrade head
+
 # Проверяем
 echo ">>> Статус контейнеров:"
 docker compose ps
