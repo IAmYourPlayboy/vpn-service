@@ -66,13 +66,14 @@ export default function AdminLayout() {
               )}
             </NavLink>
           ))}
+          <NavLink
+            to="/dashboard"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-mono transition-colors text-gray-500 hover:text-white hover:bg-white/5"
+          >
+            <span className="text-white/30 w-8 text-xs">[←]</span>
+            <span>Вернуться в ЛК</span>
+          </NavLink>
         </nav>
-        <NavLink
-          to="/dashboard"
-          className="text-sm text-gray-600 hover:text-white mt-4 text-left px-3 py-2 font-mono transition-colors"
-        >
-          <span className="text-white/30 text-xs">[←]</span> Вернуться в ЛК
-        </NavLink>
         <button
           onClick={logout}
           className="text-sm text-gray-600 hover:text-red-400 mt-1 text-left px-3 py-2 font-mono transition-colors"
