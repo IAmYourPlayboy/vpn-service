@@ -189,6 +189,8 @@ vpn/
 | role | String(20), default "user" | "owner" / "support" / "user" |
 | created_at | DateTime | |
 | last_login | DateTime, nullable | |
+| telegram_link_token | String(64), nullable | Токен для привязки TG с сайта (TTL 10 мин) |
+| telegram_link_token_expires | DateTime, nullable | Срок действия токена |
 
 ### plans
 | Поле | Тип | Описание |
@@ -248,7 +250,9 @@ POST /api/auth/login        -- Вход (email + пароль -> JWT)
 POST /api/auth/telegram     -- Вход через Telegram Login Widget
 GET  /api/auth/me           -- Текущий пользователь (+ has_active_subscription)
 PUT  /api/auth/profile      -- Обновить профиль (nickname)
+PUT  /api/auth/change-email -- Сменить email (требует пароль)
 POST /api/auth/link-email   -- Привязать email к аккаунту
+POST /api/auth/telegram-link-token -- Сгенерировать deep-link для привязки TG
 
 # VPN
 GET  /api/vpn/config        -- Subscription link + QR-код (base64)
@@ -318,9 +322,11 @@ GET  /api/health             -- Health check
 ## 8. Telegram-бот (aiogram 3)
 
 Бот встроен в FastAPI процесс (webhook mode, один процесс на VDS).
+**Имя бота:** @ANDIGO_VpnBot
 
 ```
 /start -> авто-создание аккаунта по telegram_id + главное меню
+/start link_{token} -> привязка Telegram к аккаунту на сайте (deep link)
 
 Главное меню (InlineKeyboard):
   "Мой VPN"    -> статус подписки, конфиг (subscription link), QR-код
@@ -526,11 +532,21 @@ SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3
 32. ~~Никнейм в Dashboard~~ -- приветствие whoami показывает nickname > email > "пользователь"
 33. ~~has_active_subscription~~ -- добавлен в /api/auth/me для проверки подписки на лендинге
 
+### Выполнено (2026-04-01, сессия 4):
+34. ~~Привязка Telegram с сайта~~ -- deep-link механизм: POST /api/auth/telegram-link-token → t.me/ANDIGO_VpnBot?start=link_{token} → бот подтверждает привязку
+35. ~~Смена email~~ -- PUT /api/auth/change-email (с подтверждением паролем)
+36. ~~Никнейм в админке~~ -- nickname отображается в списке пользователей и подробностях
+37. ~~Убран "Статус" из личного кабинета~~ -- пользователи больше не путают со статусом подписки
+38. ~~ASCII-иконки в админ-действиях~~ -- все emoji заменены на [x]-стиль (наследуют цвет текста)
+39. ~~Мобильный лендинг~~ -- карточки фич авто-высота на мобильных (текст не обрезается)
+40. ~~Имя бота обновлено~~ -- andigo_bot → ANDIGO_VpnBot во всех ссылках
+
 ### Не сделано (следующие шаги):
-34. **Реализовать новый дизайн лендинга** -- ASCII Cinema стиль (спецификация: docs/design-spec.md)
-35. **Настроить Telegram-бота** (получить токен у @BotFather)
-36. **Настроить ЮКасса** (самозанятый, тестовый режим, shop_id + secret_key)
-37. **Фаза 2: Система поддержки** -- тикеты от пользователей + FAQ/база знаний (отдельная БД)
+41. **Реализовать новый дизайн лендинга** -- ASCII Cinema стиль (спецификация: docs/design-spec.md)
+42. **Настроить Telegram-бота** (получить токен у @BotFather для @ANDIGO_VpnBot)
+43. **Настроить ЮКасса** (самозанятый, тестовый режим, shop_id + secret_key)
+44. **Смена пароля в личном кабинете** -- сброс старого + ввод нового (отложено)
+45. **Фаза 2: Система поддержки** -- тикеты от пользователей + FAQ/база знаний (отдельная БД)
 
 ---
 

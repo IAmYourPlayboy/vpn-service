@@ -1,6 +1,7 @@
-"""API авторизации — регистрация, вход, Telegram Login."""
+"""API авторизации — регистрация, вход, Telegram Login, привязка аккаунтов."""
 
-from datetime import datetime, timezone
+import secrets
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -8,10 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.api.schemas import (
+    ChangeEmailRequest,
     LinkEmailRequest,
     LoginRequest,
     RegisterRequest,
     TelegramAuthRequest,
+    TelegramLinkResponse,
     TokenResponse,
     UpdateProfileRequest,
     UserResponse,
@@ -192,3 +195,70 @@ async def link_email(
     user.email = data.email
     user.password_hash = hash_password(data.password)
     return {"detail": "Email привязан"}
+
+
+@router.put("/change-email", response_model=UserResponse)
+async def change_email(
+    data: ChangeEmailRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Сменить email — требует подтверждение текущим паролем."""
+    if not user.password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="У аккаунта нет пароля. Сначала привяжите email через 'Привязать email'",
+        )
+
+    if not verify_password(data.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный пароль",
+        )
+
+    # Проверка: новый email не занят другим пользователем
+    existing = await db.execute(select(User).where(User.email == data.new_email))
+    existing_user = existing.scalar_one_or_none()
+    if existing_user and existing_user.id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Этот email уже используется другим аккаунтом",
+        )
+
+    user.email = data.new_email
+    await db.flush()
+
+    # Вернуть обновлённые данные с подпиской
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.user_id == user.id,
+            Subscription.status == "active",
+        )
+    )
+    has_sub = result.scalar_one_or_none() is not None
+
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        telegram_id=user.telegram_id,
+        nickname=user.nickname,
+        is_active=user.is_active,
+        role=user.role,
+        created_at=user.created_at,
+        has_active_subscription=has_sub,
+    )
+
+
+@router.post("/telegram-link-token", response_model=TelegramLinkResponse)
+async def get_telegram_link_token(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Сгенерировать deep-link токен для привязки Telegram через бота."""
+    token = secrets.token_urlsafe(32)
+    user.telegram_link_token = token
+    user.telegram_link_token_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+    await db.flush()
+
+    link = f"https://t.me/ANDIGO_VpnBot?start=link_{token}"
+    return TelegramLinkResponse(link=link)

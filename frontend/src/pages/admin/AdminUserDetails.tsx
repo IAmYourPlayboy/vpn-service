@@ -146,10 +146,11 @@ export default function AdminUserDetails() {
             ← Назад к списку
           </button>
           <h1 className="text-xl font-mono text-white">
-            {user.email || `Telegram: ${user.telegram_id}`}
+            {user.nickname || user.email || `Telegram: ${user.telegram_id}`}
           </h1>
           <div className="text-gray-500 font-mono text-xs mt-1">
             ID: {user.id}
+            {user.nickname && user.email && <> &nbsp;|&nbsp; {user.email}</>}
             {user.telegram_id && (
               <> &nbsp;|&nbsp; TG: <a href={`tg://user?id=${user.telegram_id}`} className="text-sky-400 underline">@{user.telegram_id}</a></>
             )}
@@ -405,7 +406,7 @@ function TabActions({ user, isOwner, onToggleVpn, onReissueKey, onResetPassword,
           disabled={!hasVpn}
           className="bg-green-900/20 border border-green-800 text-green-400 p-3 rounded text-left font-mono hover:bg-green-900/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <div className="text-sm">{user.vpn_status === 'active' ? '⏸ Приостановить VPN' : '▶ Включить VPN'}</div>
+          <div className="text-sm">{user.vpn_status === 'active' ? '[||] Приостановить VPN' : '[>] Включить VPN'}</div>
           <div className="text-gray-600 text-xs mt-1">Временно отключить/включить доступ</div>
         </button>
 
@@ -414,7 +415,7 @@ function TabActions({ user, isOwner, onToggleVpn, onReissueKey, onResetPassword,
           disabled={!hasVpn}
           className="bg-red-900/20 border border-red-800 text-red-400 p-3 rounded text-left font-mono hover:bg-red-900/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <div className="text-sm">🔑 Перевыпустить ключ</div>
+          <div className="text-sm">[#] Перевыпустить ключ</div>
           <div className="text-gray-600 text-xs mt-1">Новый ключ, старый — мёртв</div>
         </button>
 
@@ -427,14 +428,14 @@ function TabActions({ user, isOwner, onToggleVpn, onReissueKey, onResetPassword,
               : 'bg-indigo-900/20 border border-indigo-800 text-indigo-400 hover:bg-indigo-900/30'
           }`}
         >
-          <div className="text-sm">🔒 Сбросить пароль</div>
+          <div className="text-sm">[*] Сбросить пароль</div>
           <div className="text-gray-700 text-xs mt-1">Новый случайный пароль</div>
         </button>
 
         {/* Изменить роль (только owner) */}
         {isOwner && user.role !== 'owner' && (
           <div className="bg-gray-900/20 border border-gray-700 p-3 rounded font-mono">
-            <div className="text-sm text-gray-400 mb-2">👤 Изменить роль</div>
+            <div className="text-sm text-gray-400 mb-2">[@] Изменить роль</div>
             <div className="flex gap-2">
               {['user', 'support', 'owner'].filter(r => r !== user.role).map((r) => (
                 <button
@@ -458,14 +459,14 @@ function TabActions({ user, isOwner, onToggleVpn, onReissueKey, onResetPassword,
               onClick={onBan}
               className="w-full bg-red-900/30 border border-red-800 text-red-400 p-3 rounded font-mono hover:bg-red-900/50 transition-colors"
             >
-              ⛔ Заблокировать пользователя
+              [!] Заблокировать пользователя
             </button>
           ) : (
             <button
               onClick={onUnban}
               className="w-full bg-green-900/30 border border-green-800 text-green-400 p-3 rounded font-mono hover:bg-green-900/50 transition-colors"
             >
-              ✓ Разблокировать пользователя
+              [+] Разблокировать пользователя
             </button>
           )}
         </div>

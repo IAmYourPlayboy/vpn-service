@@ -273,7 +273,7 @@ export default function Landing() {
                 {ASCII_LOCK}
               </pre>
               <h3 className="text-lg font-semibold mb-2">Шифрование трафика</h3>
-              <div className="text-gray-500 text-sm leading-relaxed h-[4.5rem] overflow-hidden">
+              <div className="text-gray-500 text-sm leading-relaxed h-auto md:h-[4.5rem] md:overflow-hidden">
                 <ScrambleText
                   text="Надёжное шифрование защищает ваши данные от перехвата. Современные протоколы обеспечивают безопасность соединения."
                   active={triggers[0]}
@@ -288,7 +288,7 @@ export default function Landing() {
                 {ASCII_BOLT}
               </pre>
               <h3 className="text-lg font-semibold mb-2">Высокая скорость</h3>
-              <div className="text-gray-500 text-sm leading-relaxed h-[4.5rem] overflow-hidden">
+              <div className="text-gray-500 text-sm leading-relaxed h-auto md:h-[4.5rem] md:overflow-hidden">
                 <SpeedDemo trigger={triggers[1]} />
               </div>
             </div>
@@ -299,7 +299,7 @@ export default function Landing() {
                 {ASCII_RACK}
               </pre>
               <h3 className="text-lg font-semibold mb-2">Серверы в нескольких странах</h3>
-              <div className="text-gray-500 text-sm leading-relaxed h-[4.5rem] overflow-hidden">
+              <div className="text-gray-500 text-sm leading-relaxed h-auto md:h-[4.5rem] md:overflow-hidden">
                 <MultiLangText trigger={triggers[2]} />
               </div>
             </div>
@@ -381,7 +381,7 @@ export default function Landing() {
           <span className="font-mono">© 2026 Andigo</span>
           <div className="flex gap-6">
             <a
-              href="https://t.me/andigo_bot"
+              href="https://t.me/ANDIGO_VpnBot"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white transition-colors"

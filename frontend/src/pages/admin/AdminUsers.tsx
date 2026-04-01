@@ -68,6 +68,7 @@ export default function AdminUsers() {
     if (!search) return true
     const q = search.toLowerCase()
     return (
+      (u.nickname && u.nickname.toLowerCase().includes(q)) ||
       (u.email && u.email.toLowerCase().includes(q)) ||
       (u.telegram_id && String(u.telegram_id).includes(q)) ||
       String(u.id).includes(q)
@@ -102,7 +103,7 @@ export default function AdminUsers() {
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Поиск по email, telegram_id, ID..."
+          placeholder="Поиск по имени, email, telegram_id, ID..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full md:w-96 bg-dark-card border border-dark-border text-white px-3 py-2 text-sm font-mono placeholder-gray-600 focus:border-green-400 focus:outline-none"
@@ -117,6 +118,7 @@ export default function AdminUsers() {
             <thead>
               <tr className="text-gray-500 border-b border-dark-border">
                 <th className="text-left p-3">ID</th>
+                <th className="text-left p-3">Имя</th>
                 <th className="text-left p-3">Email</th>
                 <th className="text-left p-3">Telegram</th>
                 <th className="text-left p-3">Статус</th>
@@ -131,6 +133,7 @@ export default function AdminUsers() {
                 return (
                   <tr key={u.id} className="border-b border-dark-border/50 text-gray-300 hover:bg-white/[0.02]">
                     <td className="p-3 text-gray-600">{u.id}</td>
+                    <td className="p-3 text-gray-400">{u.nickname || '—'}</td>
                     <td className="p-3">{u.email || '—'}</td>
                     <td className="p-3">
                       {u.telegram_id ? (
@@ -183,7 +186,7 @@ export default function AdminUsers() {
                 )
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="p-3 text-gray-600">Нет данных</td></tr>
+                <tr><td colSpan={8} className="p-3 text-gray-600">Нет данных</td></tr>
               )}
             </tbody>
           </table>

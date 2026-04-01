@@ -68,6 +68,21 @@ export async function updateProfile(data: { nickname?: string }) {
   return result
 }
 
+export async function changeEmail(newEmail: string, password: string) {
+  const { data } = await api.put('/auth/change-email', { new_email: newEmail, password })
+  return data
+}
+
+export async function getTelegramLinkToken() {
+  const { data } = await api.post('/auth/telegram-link-token')
+  return data  // { link: "https://t.me/ANDIGO_VpnBot?start=link_TOKEN" }
+}
+
+export async function linkEmail(email: string, password: string) {
+  const { data } = await api.post('/auth/link-email', { email, password })
+  return data
+}
+
 // === VPN ===
 
 export async function getVPNConfig() {

@@ -121,6 +121,17 @@ class LinkTelegramRequest(BaseModel):
     telegram_id: int
 
 
+class ChangeEmailRequest(BaseModel):
+    """Смена email — требует подтверждение текущим паролем."""
+    new_email: EmailStr
+    password: str
+
+
+class TelegramLinkResponse(BaseModel):
+    """Ответ с deep-link для привязки Telegram."""
+    link: str
+
+
 # === Админка ===
 
 class AdminSubscriptionResponse(BaseModel):
@@ -187,6 +198,7 @@ class UserDetailResponse(BaseModel):
     id: int
     email: str | None = None
     telegram_id: int | None = None
+    nickname: str | None = None
     role: str
     is_active: bool
     created_at: datetime

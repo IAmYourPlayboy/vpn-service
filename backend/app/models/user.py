@@ -22,6 +22,10 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+    # Привязка Telegram с сайта (deep link токен)
+    telegram_link_token: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    telegram_link_token_expires: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     # Связи
     subscriptions = relationship("Subscription", back_populates="user", lazy="selectin")
     payments = relationship("Payment", back_populates="user", lazy="selectin")
