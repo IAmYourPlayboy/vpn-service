@@ -104,6 +104,13 @@ export default function AdminLayout() {
             <span>{item.label}</span>
           </NavLink>
         ))}
+        <NavLink
+          to="/dashboard"
+          className="flex flex-col items-center text-[10px] py-1 px-2 font-mono text-gray-600"
+        >
+          <span className="text-xs mb-0.5">[←]</span>
+          <span>Кабинет</span>
+        </NavLink>
       </nav>
     </div>
   )
