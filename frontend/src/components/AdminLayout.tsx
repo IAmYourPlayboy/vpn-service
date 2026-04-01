@@ -70,7 +70,7 @@ export default function AdminLayout() {
             to="/dashboard"
             className="flex items-center gap-2 px-3 py-2 text-sm font-mono transition-colors text-gray-500 hover:text-white hover:bg-white/5"
           >
-            <span className="text-white/30 w-8 text-xs">[←]</span>
+            <span className="text-white/30 w-8 text-xs">[⬅]</span>
             <span>Вернуться в ЛК</span>
           </NavLink>
         </nav>
@@ -108,7 +108,7 @@ export default function AdminLayout() {
           to="/dashboard"
           className="flex flex-col items-center text-[10px] py-1 px-2 font-mono text-gray-600"
         >
-          <span className="text-xs mb-0.5">[←]</span>
+          <span className="text-xs mb-0.5">[⬅]</span>
           <span>Кабинет</span>
         </NavLink>
       </nav>
