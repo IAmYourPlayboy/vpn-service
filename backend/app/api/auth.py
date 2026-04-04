@@ -3,6 +3,9 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
+# Московское время (UTC+3)
+MOSCOW_TZ = timezone(timedelta(hours=3))
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.api.schemas import (
     ChangeEmailRequest,
+    ChangePasswordRequest,
     LinkEmailRequest,
     LoginRequest,
     RegisterRequest,
@@ -74,7 +78,7 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
         )
 
     # Обновляем last_login
-    user.last_login = datetime.now(timezone.utc)
+    user.last_login = datetime.now(MOSCOW_TZ)
     token = create_access_token(user.id, user.role)
     return TokenResponse(access_token=token)
 
@@ -106,7 +110,7 @@ async def telegram_auth(data: TelegramAuthRequest, db: AsyncSession = Depends(ge
             detail="Аккаунт деактивирован",
         )
 
-    user.last_login = datetime.now(timezone.utc)
+    user.last_login = datetime.now(MOSCOW_TZ)
     token = create_access_token(user.id, user.role)
     return TokenResponse(access_token=token)
 
@@ -249,6 +253,37 @@ async def change_email(
     )
 
 
+@router.put("/change-password")
+async def change_password(
+    data: ChangePasswordRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Сменить пароль — требует подтверждение текущим паролем."""
+    if not user.password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="У аккаунта нет пароля. Сначала привяжите email через 'Привязать email'",
+        )
+
+    if not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный текущий пароль",
+        )
+
+    if len(data.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Новый пароль должен содержать минимум 6 символов",
+        )
+
+    user.password_hash = hash_password(data.new_password)
+    await db.flush()
+
+    return {"detail": "Пароль успешно изменён"}
+
+
 @router.post("/telegram-link-token", response_model=TelegramLinkResponse)
 async def get_telegram_link_token(
     user: User = Depends(get_current_user),
@@ -257,7 +292,7 @@ async def get_telegram_link_token(
     """Сгенерировать deep-link токен для привязки Telegram через бота."""
     token = secrets.token_urlsafe(32)
     user.telegram_link_token = token
-    user.telegram_link_token_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+    user.telegram_link_token_expires = datetime.now(MOSCOW_TZ) + timedelta(minutes=10)
     await db.flush()
 
     link = f"https://t.me/ANDIGO_VpnBot?start=link_{token}"

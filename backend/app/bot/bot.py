@@ -5,6 +5,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.bot.handlers import menu, start, vpn_handler, subscription, settings_handler, admin_handler, help_handler, servers_handler
 from app.config import settings
@@ -27,7 +28,7 @@ def create_bot() -> tuple[Bot | None, Dispatcher | None]:
         token=settings.telegram_bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    dp = Dispatcher()
+    dp = Dispatcher(storage=MemoryStorage())
 
     # Регистрируем обработчики
     dp.include_router(start.router)

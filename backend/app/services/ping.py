@@ -3,7 +3,10 @@
 import asyncio
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+# Московское время (UTC+3)
+MOSCOW_TZ = timezone(timedelta(hours=3))
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -74,7 +77,7 @@ async def update_pings():
         tasks = [ping_host(server.host) for server in servers]
         results = await asyncio.gather(*tasks)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(MOSCOW_TZ)
 
         for server, ping_ms in zip(servers, results):
             status = _ping_status(ping_ms)

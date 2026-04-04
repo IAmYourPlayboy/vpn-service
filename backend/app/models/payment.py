@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, func
+from sqlalchemy import DateTime, ForeignKey, Numeric, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -18,7 +18,7 @@ class Payment(Base):
     currency: Mapped[str] = mapped_column(String(3), default="RUB")
     yokassa_payment_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending / succeeded / cancelled
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("datetime('now', '+3 hours')"))
 
     # Связи
     user = relationship("User", back_populates="payments")

@@ -232,3 +232,35 @@ class ChangeRoleRequest(BaseModel):
 class ResetPasswordResponse(BaseModel):
     """Ответ на сброс пароля — новый пароль показывается один раз."""
     new_password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    """Смена пароля пользователя."""
+    current_password: str
+    new_password: str
+
+
+# === Удаление записей ===
+
+class DeleteUserResponse(BaseModel):
+    """Ответ на удаление пользователя."""
+    detail: str
+    user_id: int
+
+
+class DeleteSubscriptionResponse(BaseModel):
+    """Ответ на удаление подписки."""
+    detail: str
+    subscription_id: int
+
+
+class DeletePaymentResponse(BaseModel):
+    """Ответ на удаление платежа."""
+    detail: str
+    payment_id: int
+
+
+class DeletePlanResponse(BaseModel):
+    """Ответ на удаление тарифа."""
+    detail: str
+    plan_id: int

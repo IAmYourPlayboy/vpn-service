@@ -3,6 +3,10 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
+# Московское время (UTC+3)
+MOSCOW_TZ = timezone(timedelta(hours=3))
+
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -60,7 +64,7 @@ async def activate_subscription(
     # Создаём нового VPN-пользователя в Marzban
     marzban_username = await create_marzban_user(user_id)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(MOSCOW_TZ)
     subscription = Subscription(
         user_id=user_id,
         plan_id=plan_id,
@@ -88,7 +92,7 @@ async def check_expired_subscriptions(db: AsyncSession) -> int:
     Вызывается по cron каждый час.
     Returns: количество деактивированных подписок.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(MOSCOW_TZ)
 
     result = await db.execute(
         select(Subscription).where(
@@ -110,7 +114,7 @@ async def check_expired_subscriptions(db: AsyncSession) -> int:
 
 async def get_expiring_subscriptions(db: AsyncSession, days: int = 3) -> list[Subscription]:
     """Найти подписки, истекающие в ближайшие N дней (для уведомлений)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(MOSCOW_TZ)
     threshold = now + timedelta(days=days)
 
     result = await db.execute(

@@ -23,7 +23,7 @@ class MarzbanClient:
         if self._token:
             return self._token
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:
             response = await client.post(
                 f"{self.base_url}/api/admin/token",
                 data={
@@ -40,7 +40,8 @@ class MarzbanClient:
         token = await self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
 
-        async with httpx.AsyncClient() as client:
+        # Отключаем SSL-верификацию (self-signed cert)
+        async with httpx.AsyncClient(verify=False) as client:
             response = await client.request(
                 method,
                 f"{self.base_url}{path}",
@@ -76,10 +77,13 @@ class MarzbanClient:
         payload = {
             "username": username,
             "proxies": {
-                "vless": {"flow": "xtls-rprx-vision"},
+                "shadowsocks": {
+                    "method": "chacha20-ietf-poly1305",
+                    "password": f"ss_{username[:20]}_pass",
+                },
             },
             "inbounds": {
-                "vless": ["VLESS TCP REALITY"],
+                "shadowsocks": ["Shadowsocks TCP"],
             },
             "data_limit": data_limit_gb * 1024 * 1024 * 1024 if data_limit_gb else 0,
             "status": "active",

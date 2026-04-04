@@ -2,13 +2,13 @@
 
 import base64
 import io
-from datetime import datetime
 
 from aiogram import F, Router
 from aiogram.types import BufferedInputFile, CallbackQuery
 from sqlalchemy import select
 
 from app.bot.keyboards.main_menu import back_to_menu_keyboard, vpn_keyboard
+from app.bot.utils.date_utils import msk_date, msk_days_left
 from app.database import async_session
 from app.models.subscription import Subscription
 from app.models.user import User
@@ -53,11 +53,11 @@ async def show_vpn(callback: CallbackQuery):
         return
 
     # Формируем текст статуса
-    days_left = max(0, (sub.expires_at - datetime.utcnow()).days)
+    days_left = msk_days_left(sub.expires_at)
     text = (
         "🔑 <b>Мой VPN</b>\n\n"
         f"✅ Подписка активна\n"
-        f"📅 До: {sub.expires_at.strftime('%d.%m.%Y')}\n"
+        f"📅 До: {msk_date(sub.expires_at)}\n"
         f"⏳ Осталось: {days_left} дней\n\n"
         "Выберите действие:"
     )

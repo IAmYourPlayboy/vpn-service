@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
-import { getAdminPlans, createAdminPlan, updateAdminPlan, toggleAdminPlan } from '../../api/client'
+import { getAdminPlans, createAdminPlan, updateAdminPlan, toggleAdminPlan, deletePlan } from '../../api/client'
 
 export default function AdminPlans() {
   const [plans, setPlans] = useState<any[]>([])
@@ -70,6 +70,16 @@ export default function AdminPlans() {
   const handleToggle = async (id: number) => {
     await toggleAdminPlan(id)
     loadData()
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Удалить этот тариф?')) return
+    try {
+      await deletePlan(id)
+      loadData()
+    } catch (e: any) {
+      alert(e.response?.data?.detail || 'Ошибка удаления')
+    }
   }
 
   return (
@@ -171,6 +181,12 @@ export default function AdminPlans() {
                       className={`text-xs ${p.is_active ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'}`}
                     >
                       {p.is_active ? '[Выкл]' : '[Вкл]'}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      className="text-red-600 hover:text-red-500 text-xs font-bold"
+                    >
+                      [Удалить]
                     </button>
                   </td>
                 </tr>

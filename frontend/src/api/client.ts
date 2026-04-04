@@ -83,6 +83,14 @@ export async function linkEmail(email: string, password: string) {
   return data
 }
 
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const { data } = await api.put('/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+  return data
+}
+
 // === VPN ===
 
 export async function getVPNConfig() {
@@ -197,6 +205,28 @@ export async function createUser(userData: { email: string; password: string; ro
 
 export async function changeRole(userId: number, role: string) {
   const { data } = await api.put(`/admin/users/${userId}/role`, { role })
+  return data
+}
+
+// === Удаление записей (owner only) ===
+
+export async function deleteUser(userId: number) {
+  const { data } = await api.delete(`/admin/users/${userId}`)
+  return data
+}
+
+export async function deleteAdminSubscription(subId: number) {
+  const { data } = await api.delete(`/admin/subscriptions/${subId}`)
+  return data
+}
+
+export async function deletePayment(paymentId: number) {
+  const { data } = await api.delete(`/admin/payments/${paymentId}`)
+  return data
+}
+
+export async function deletePlan(planId: number) {
+  const { data } = await api.delete(`/admin/plans/${planId}`)
   return data
 }
 

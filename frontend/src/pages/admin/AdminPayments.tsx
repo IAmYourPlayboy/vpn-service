@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
-import { getAdminPayments } from '../../api/client'
+import { getAdminPayments, deletePayment, getMe } from '../../api/client'
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Все' },
@@ -16,12 +16,15 @@ export default function AdminPayments() {
   const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
+  const [isOwner, setIsOwner] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
       const data = await getAdminPayments(statusFilter || undefined)
       setPayments(data)
+      const me = await getMe()
+      setIsOwner(me.role === 'owner')
     } catch (e) {
       console.error(e)
     } finally {
@@ -30,6 +33,16 @@ export default function AdminPayments() {
   }, [statusFilter])
 
   useEffect(() => { loadData() }, [loadData])
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Удалить этот платёж?')) return
+    try {
+      await deletePayment(id)
+      loadData()
+    } catch (e: any) {
+      alert(e.response?.data?.detail || 'Ошибка удаления')
+    }
+  }
 
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU')
 
@@ -82,6 +95,7 @@ export default function AdminPayments() {
                 <th className="text-left p-3">Статус</th>
                 <th className="text-left p-3">ЮКасса ID</th>
                 <th className="text-left p-3">Дата</th>
+                <th className="text-left p-3">Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -96,10 +110,20 @@ export default function AdminPayments() {
                   </td>
                   <td className="p-3 text-xs text-gray-500">{p.yokassa_payment_id || '—'}</td>
                   <td className="p-3">{formatDate(p.created_at)}</td>
+                  <td className="p-3">
+                    {isOwner && (
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="text-red-600 hover:text-red-500 text-xs font-bold"
+                      >
+                        [Удалить]
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
               {payments.length === 0 && (
-                <tr><td colSpan={7} className="p-3 text-gray-600">Нет данных</td></tr>
+                <tr><td colSpan={8} className="p-3 text-gray-600">Нет данных</td></tr>
               )}
             </tbody>
           </table>

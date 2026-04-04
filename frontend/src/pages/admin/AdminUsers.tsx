@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAdminUsers, banUser, unbanUser, createUser, getMe } from '../../api/client'
+import { getAdminUsers, banUser, unbanUser, createUser, getMe, deleteUser } from '../../api/client'
 
 // Цвета бейджей ролей
 const ROLE_STYLES: Record<string, { bg: string; text: string; label: string }> = {
@@ -19,6 +19,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [myRole, setMyRole] = useState<string>('user')
+  const [myId, setMyId] = useState<number | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createForm, setCreateForm] = useState({ email: '', password: '', role: 'user', activate_subscription: false })
   const [createError, setCreateError] = useState('')
@@ -29,6 +30,7 @@ export default function AdminUsers() {
       const [data, me] = await Promise.all([getAdminUsers(0, 200), getMe()])
       setUsers(data)
       setMyRole(me.role)
+      setMyId(me.id)
     } catch (e) {
       console.error(e)
     } finally {
@@ -47,6 +49,17 @@ export default function AdminUsers() {
   const handleUnban = async (id: number) => {
     await unbanUser(id)
     loadData()
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('ВНИМАНИЕ: Удалить пользователя навсегда?')) return
+    if (!confirm('Это действие необратимо. Подписки и платежи тоже будут удалены. Продолжить?')) return
+    try {
+      await deleteUser(id)
+      loadData()
+    } catch (e: any) {
+      alert(e.response?.data?.detail || 'Ошибка удаления')
+    }
   }
 
   const handleCreate = async () => {
@@ -137,13 +150,23 @@ export default function AdminUsers() {
                     <td className="p-3">{u.email || '—'}</td>
                     <td className="p-3">
                       {u.telegram_id ? (
-                        <a
-                          href={`tg://user?id=${u.telegram_id}`}
-                          className="text-sky-400 hover:text-sky-300 underline"
-                          title={`Telegram ID: ${u.telegram_id}`}
-                        >
-                          @{u.telegram_id}
-                        </a>
+                        <div className="flex items-center gap-1">
+                          <a
+                            href={`tg://user?id=${u.telegram_id}`}
+                            className="text-sky-400 hover:text-sky-300 underline cursor-pointer"
+                            title={`Открыть чат в Telegram (ID: ${u.telegram_id})`}
+                          >
+                            @{u.telegram_id}
+                          </a>
+                          <span className="text-gray-700 text-xs">/</span>
+                          <button
+                            onClick={() => window.open(`tg://user?id=${u.telegram_id}`, '_blank')}
+                            className="text-green-400 hover:text-green-300 text-xs"
+                            title="Написать в Telegram"
+                          >
+                            Написать
+                          </button>
+                        </div>
                       ) : '—'}
                     </td>
                     <td className="p-3">
@@ -180,6 +203,15 @@ export default function AdminUsers() {
                             [Разбан]
                           </button>
                         )
+                      )}
+                      {isOwner && u.id !== myId && u.role !== 'owner' && (
+                        <button
+                          onClick={() => handleDelete(u.id)}
+                          className="text-red-600 hover:text-red-500 text-xs font-bold"
+                          title="Удалить навсегда"
+                        >
+                          [Удалить]
+                        </button>
                       )}
                     </td>
                   </tr>

@@ -32,18 +32,20 @@
 ## 3. Архитектура
 
 ```
-Пользователи (сайт / TG-бот)
-        |
-        v
-+----------------------------------------------+
-|     VDS 37.230.115.104 (2 ГБ RAM)           |
-|  Nginx (reverse proxy + статика React)       |
-|  FastAPI (API + aiogram бот в одном процессе)|
-|  SQLite (наша БД)    Marzban (VPN-ядро)     |
-+----------------------------------------------+
-        | (будущее)
-   VPN-ноды в других странах
+Пользователи (сайт / TG-бот)                          Внешние VPN-ноды
+        |                                                    |
+        v                                                    v
++----------------------------------------------+    +--------------------------+
+|     VDS 37.230.115.104 (2 ГБ RAM)           |    | Париж 109.120.179.67    |
+|  Nginx (reverse proxy + статика React)       |===>| marzban-node (mTLS)     |
+|  FastAPI (API + aiogram бот в одном процессе)|    | Xray core v25.3.6       |
+|  SQLite (наша БД)    Marzban (VPN-ядро)     |    | Порт 62050/62051        |
++----------------------------------------------+    +--------------------------+
 ```
+
+**Marzban Dashboard доступ:** через Nginx порт `8888` (SSL-терминация, проксирует HTTPS на marzban:8080). URL: `https://andigo.su:8888/`
+
+**mTLS аутентификация нод:** Marzban панель (клиент mTLS) инициирует подключение к ноде. Сертификаты хранятся в таблице `tls` БД Marzban. Нода использует `cert.pem` как CA для проверки клиентских подключений.
 
 **RAM-бюджет (2 ГБ):** OS ~200 МБ, Marzban ~250 МБ, FastAPI+бот ~150 МБ, Nginx ~20 МБ, свободно ~1300 МБ + 1 ГБ swap.
 
@@ -471,10 +473,14 @@ DOMAIN=andigo.su
 ```
 UVICORN_HOST=0.0.0.0
 UVICORN_PORT=8080
+UVICORN_SSL_CERTFILE=/var/lib/marzban/ssl_cert.pem
+UVICORN_SSL_KEYFILE=/var/lib/marzban/ssl_key.pem
+UVICORN_SSL_CA_TYPE=private
 SUDO_USERNAME=admin
 SUDO_PASSWORD=сменить-пароль-в-проде
 SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3
 ```
+Примечание: SSL нужен для того, чтобы Marzban слушал на 0.0.0.0 (без SSL биндится только на 127.0.0.1). `UVICORN_SSL_CA_TYPE=private` позволяет использовать self-signed сертификаты.
 
 ---
 
@@ -568,7 +574,252 @@ SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3
 
 ---
 
-## 15. Правила для Claude Code
+## 15. Подключение новой VPN-ноды: дерево решений
+
+Алгоритм подключения удалённой ноды (marzban-node) к основной панели (Marzban на FirstVDS).
+Каждый шаг — с развилками "если так, то ... если иначе, то ...".
+
+### Шаг 1: Установка ноды на удалённом сервере
+
+```bash
+curl -sSL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban-node.sh | bash -s -- install
+```
+
+**Развилка:**
+```
+Установка завершена?
+├─ ДА → перейти к Шагу 2
+└─ НЕТ ("already installed", но сервис не запускается)
+    │
+    └─ systemctl status marzban-node → "Unit not found"?
+        ├─ ДА → Нода установлена через Docker, не systemd!
+        │   └─ Проверить: docker ps -a | grep marzban
+        │       └─ Контейнер есть? → cd /opt/marzban-node && docker compose restart
+        │           └─ Нет docker-compose.yml? → Удалить и переустановить
+        └─ НЕТ → Другая ошибка, смотреть логи: journalctl -u marzban-node
+```
+
+### Шаг 2: Извлечь TLS-сертификат из основной панели
+
+```bash
+# На основной VDS (37.230.115.104)
+ssh root@37.230.115.104 "
+docker compose -f /opt/vpn/deploy/docker-compose.yml exec -T marzban python3 -c \"
+import sqlite3
+conn = sqlite3.connect('/var/lib/marzban/db.sqlite3')
+cur = conn.cursor()
+cur.execute('SELECT key, certificate FROM tls LIMIT 1')
+row = cur.fetchone()
+with open('/tmp/panel_key.pem', 'w') as f: f.write(row[0])
+with open('/tmp/panel_cert.pem', 'w') as f: f.write(row[1])
+print('Extracted key and cert')
+\""
+```
+
+**КРИТИЧНО:** Эти сертификаты — то, чем панель аутентифицируется перед нодой через mTLS.
+SERVICE_JWT_TOKEN НЕ НУЖЕН. Аутентификация нод — только через mTLS.
+
+### Шаг 3: Настройка сертификатов на ноде
+
+```bash
+# Скопировать cert.pem на удалённую ноду как CA-сертификат
+scp panel_cert.pem root@NODE_IP:/var/lib/marzban-node/cert.pem
+```
+
+**Развилка:**
+```
+Скопировано? Рестарт ноды?
+├─ ДА → перейти к Шагу 4
+└─ НЕТ → Подключение панели к ноде не работает (TCP RST / connection closed)
+    │
+    └─ Проверить: openssl x509 -in cert.pem -noout -text | grep "Version:"
+        ├─ Version: 1 → OpenSSL 3.x отклоняет v1 как CA!
+        │   └─→ Сгенерировать v3 CA с расширениями:
+        │       openssl req -x509 -newkey rsa:4096 -keyout ca_key.pem -out ca_cert.pem
+        │         -days 3650 -nodes -subj '/CN=MarzbanNode-CA'
+        │         -addext 'basicConstraints=critical,CA:TRUE'
+        │         -addext 'keyUsage=critical,keyCertSign,cRLSign'
+        │       Затем подписать клиентский cert этим CA и обновить в панели
+        │
+        └─ Проверить логи ноды: docker compose logs --tail 20
+            ├─ Есть записи от IP панели?
+            │   ├─ ДА, но "503 Service Unavailable" → Xray не запущен → Шаг 3.1
+            │   └─ НЕТ → TLS отвергает клиентский сертификат → проверить ca_cert.pem
+```
+
+### Шаг 3.1: Проверка Xray на ноде
+
+```bash
+# На удалённой ноде
+/var/lib/marzban-node/xray-core/xray version
+```
+
+**Развилка:**
+```
+Xray работает?
+├─ ДА → перейти к Шагу 4
+└─ НЕТ
+    │
+    ├─ "command not found" / "binary not found"
+    │   └─→ Скачать Xray вручную:
+    │       wget https://github.com/XTLS/Xray-core/releases/download/v25.3.6/Xray-linux-64.zip
+    │       unzip, xray → /var/lib/marzban-node/xray-core/xray
+    │       chmod +x /var/lib/marzban-node/xray-core/xray
+    │
+    └─ Проверить geo-файлы:
+        ls -la /var/lib/marzban-node/xray-core/*.dat
+        ├─ geoip.dat = 0 bytes → Xray молча падает!
+        │   └─→ curl -sL .../geoip.dat -o geoip.dat (скачать свежий)
+        └─ geosite.dat отсутствует → то же самое
+```
+
+### Шаг 4: Обновить сертификаты в панели
+
+```bash
+# Если заменили CA на ноде — ОБНОВИТЬ клиентский cert в панели!
+docker compose -f /opt/vpn/deploy/docker-compose.yml cp client_cert.pem marzban:/tmp/
+docker compose -f /opt/vpn/deploy/docker-compose.yml cp client_key.pem marzban:/tmp/
+
+docker exec deploy-marzban-1 python3 << 'PYEOF'
+import sqlite3
+with open('/tmp/client_cert.pem') as f: cert = f.read()
+with open('/tmp/client_key.pem') as f: key = f.read()
+conn = sqlite3.connect('/var/lib/marzban/db.sqlite3')
+cur = conn.cursor()
+cur.execute('UPDATE tls SET key=?, certificate=?', (key, cert))
+conn.commit()
+print('Updated TLS certificates in DB')
+PYEOF
+
+docker compose -f /opt/vpn/deploy/docker-compose.yml restart marzban
+```
+
+### Шаг 5: Проверка подключения
+
+```bash
+# Проверить статус ноды через API
+docker exec deploy-marzban-1 python3 << 'PYEOF'
+import requests, urllib3
+urllib3.disable_warnings()
+# Получить токен
+token = requests.post("https://127.0.0.1:8080/api/admin/token",
+    data={"username": "admin", "password": "..."}, verify=False).json()["access_token"]
+# Статус нод
+nodes = requests.get("https://127.0.0.1:8080/api/nodes",
+    headers={"Authorization": f"Bearer {token}"}, verify=False).json()
+for n in nodes:
+    print(f"Node: {n['name']} | Status: {n['status']} | Xray: {n.get('xray_version','?')}")
+PYEOF
+```
+
+**Развилка:**
+```
+Статус ноды?
+├─ "connected" → ГОТОВО! Всё работает
+├─ "disconnected" → Смотреть логи
+│   ├─ "Unable to connect" → TCP/TLS проблема (Шаги 3-4)
+│   ├─ "Unable to restart" → Xray проблема (Шаг 3.1)
+│   └─ "Connected" → Подождать несколько секунд, статус скоро обновится
+└─ "error" → Логи панели: docker compose logs marzban --tail 30
+```
+
+### Шаг 6: Доступ к панели через Nginx (порт 8888)
+
+```
+Nginx проксирует HTTPS на marzban:8080
+
+Развилка:
+curl -sk https://localhost:8888/ → ?
+├─ 200 OK → Работает
+└─ 502 Bad Gateway
+    │
+    ├─ Marzban слушает HTTPS (UVICORN_SSL_* env установлен)
+    │   → nginx: proxy_pass https://marzban:8080 + proxy_ssl_verify off;
+    │     (proxy_ssl_verify off потому что cert self-signed)
+    │
+    └─ Marzban слушает только 127.0.0.1 (нет SSL env)
+        → Добавить SSL env vars обратно:
+          UVICORN_SSL_CERTFILE, UVICORN_SSL_KEYFILE, UVICORN_SSL_CA_TYPE=private
+        → docker compose restart marzban
+```
+
+---
+
+## 15.1. Критические правила (запомнить навсегда)
+
+- **Marzban без SSL env → биндится на 127.0.0.1.** Это hardcoded в main.py строка 88.
+- **DEBUG=true в Marzban → падает** (пытается запустить npm, которого нет в контейнере).
+- **X.509 v1 сертификаты → отклоняются OpenSSL 3.x.** Всегда использовать v3 с `basicConstraints=CA:TRUE`.
+- **geoip.dat = 0 bytes → Xray молча падает.** Всегда проверять размер файлов.
+- **SERVICE_JWT_TOKEN не нужен.** Аутентификация нод — через mTLS (cert + key из таблицы tls).
+- **sshpass не работает на Windows.** Все команды с паролями запускать hop через VDS: `ssh root@vds "sshpass -p ... ssh root@node ..."`.
+
+---
+
+## 15.2. Журнал ошибок: Paris node (2026-04-03)
+
+**#1: "no such table: core"**
+- **Что:** Искал SERVICE_JWT_TOKEN в таблице `core` SQLite БД Marzban
+- **Почему:** Предположил что JWT хранится в таблице core
+- **Решение:** JWT не нужен. Механизм аутентификации нод — mTLS через таблицу `tls`
+- **Урок:** Всегда проверять реальную схему БД, а не гадать
+
+**#2: "already installed" но systemctl не находит**
+- **Что:** Скрипт сказал node установлен, но `systemctl status marzban-node` → "Unit not found"
+- **Почему:** Установка через Docker, не systemd
+- **Решение:** `docker ps -a | grep marzban`, рестарт через `docker compose restart`
+- **Урок:** Сперва проверять тип установки (systemd или Docker)
+
+**#3: TCP RST после TLS handshake — САМАЯ ТРРДНАЯ ОШИБКА**
+- **Что:** TCP handshake → TLS handshake OK → POST /connect отправлен → node шлёт TCP RST. В логах ноды ни одной записи от IP панели
+- **Почему:** cert.pem был X.509 v1 (без basicConstraints:CA:TRUE). OpenSSL 3.x на Ubuntu 24.04 отклоняет v1 как CA при mTLS проверке. Соединение закрывается на TLS уровне ДО HTTP
+- **Решение:** Сгенерировать X.509v3 CA cert с `basicConstraints=critical,CA:TRUE` и `keyUsage=keyCertSign,cRLSign`. Подписать клиентский cert этим CA. Обновить cert.pem на ноде и tls таблицу в панели
+- **Урок:** v1 сертификаты без CA расширений = невидимый deadlock на Ubuntu 24.04. Всегда проверять `openssl x509 -text | grep "Version:"`
+
+**#4: 503 Service Unavailable на /start**
+- **Что:** mTLS подключился (/connect 200 OK), но /start возвращает 503
+- **Почему:** geoip.dat = 0 байт — битый файл при копировании. Xray не может запуститься без валидных geo-файлов
+- **Решение:** Скачать свежие geoip.dat и geosite.dat с github.com/Loyalsoldier/v2ray-rules-dat/
+- **Урок:** Xray молча падает при отсутствующих/битых geo файлах
+
+**#5: Xray binary not found**
+- **Что:** Установщик marzban-node не скачал Xray автоматически
+- **Почему:** Скрипт установки может не скачать Xray core
+- **Решение:** Скачать вручную с github.com/XTLS/Xray-core/releases/ и поместить в /var/lib/marzban-node/xray-core/
+
+**#6: Marzban слушает только 127.0.0.1**
+- **Что:** UVICORN_HOST=0.0.0.0 в env, но Marzban биндится на 127.0.0.1:8080
+- **Почему:** main.py строка 88: если нет SSL env vars → принудительно host='127.0.0.1'
+- **Решение:** Добавить UVICORN_SSL_CERTFILE, UVICORN_SSL_KEYFILE, UVICORN_SSL_CA_TYPE=private
+- **Урок:** Без SSL Marzban работает только на localhost. Для nginx прокси нужен SSL
+
+**#7: DEBUG=true крашит Marzban**
+- **Что:** Добавил DEBUG=true чтобы обойти 127.0.0.1 биндинг → Marzban не запускается
+- **Почему:** debug mode пытается запустить `npm` для dev dashboard — в Docker контейнере нет npm
+- **Решение:** Убрать DEBUG=true, использовать SSL env подход
+- **Урок:** DEBUG=true работает только если npm доступен в контейнере
+
+**#8: Nginx 502 Bad Gateway на порт 8888**
+- **Что:** Nginx `proxy_pass http://marzban:8080` → 502
+- **Почему:** Marzban слушает HTTPS (SSL env установлен), nginx шлёт HTTP
+- **Решение:** `proxy_pass https://marzban:8080` + `proxy_ssl_verify off;`
+- **Урок:** Nginx должен соответствовать протоколу Marzban (HTTP или HTTPS)
+
+**#9: sshpass 'command not found' на Windows**
+- **Что:** sshpass -p password ssh ... → command not found на Windows
+- **Почему:** Git Bash на Windows не включает sshpass
+- **Решение:** Запускать через VDS: `ssh root@vds "sshpass -p ... ssh root@node ..."`
+- **Урок:** Все команды с паролями — только через hop на Linux VDS
+
+**#10: Экранирование через тройной SSH**
+- **Что:** Сложные команды с кавычками через ssh root@vds "sshpass ssh node 'python...'" ломаются
+- **Почему:** Конфликт экранирования кавычек через несколько SSH прыжков
+- **Решение:** Использовать heredoc (`<< 'PYEOF'`) или писать команды в файлы, запускать отдельно
+- **Урок:** Тройной SSH + Python f-strings = кавычки ломаются. Делать шаги отдельно
+
+---
+
+## 16. Правила для Claude Code
 
 - Весь код с **русскими комментариями**
 - Не создавать лишних файлов

@@ -1,6 +1,9 @@
 """Обработчик /start — приветствие, создание аккаунта, привязка Telegram через deep link."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+# Московское время (UTC+3)
+MOSCOW_TZ = timezone(timedelta(hours=3))
 
 from aiogram import Router
 from aiogram.filters import CommandObject, CommandStart
@@ -58,7 +61,7 @@ async def cmd_start(message: Message, command: CommandObject):
 async def _handle_link_token(message: Message, telegram_id: int, token: str):
     """Обработка deep link: привязать Telegram к аккаунту на сайте."""
     async with async_session() as db:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(MOSCOW_TZ)
 
         # Ищем пользователя по токену (не истёкшему)
         result = await db.execute(

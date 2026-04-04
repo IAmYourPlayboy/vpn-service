@@ -7,8 +7,13 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   getUserDetails, toggleVpn, reissueKey, resetPassword,
-  banUser, unbanUser, changeRole, getMe,
+  banUser, unbanUser, changeRole, deleteUser, getMe,
 } from '../../api/client'
+
+// Перенаправление в чат Telegram по numeric ID
+function openTelegramChat(telegramId: number) {
+  window.open(`tg://user?id=${telegramId}`, '_blank')
+}
 
 const TABS = ['VPN', 'Подписка', 'Платежи', 'Действия'] as const
 type Tab = typeof TABS[number]
@@ -118,6 +123,17 @@ export default function AdminUserDetails() {
     }
   }
 
+  const handleDeleteUser = async () => {
+    if (!confirm('ВНИМАНИЕ: Удалить пользователя навсегда?')) return
+    if (!confirm('Это действие необратимо. Подписки и платежи тоже будут удалены. Продолжить?')) return
+    try {
+      await deleteUser(Number(id))
+      navigate('/admin/users')
+    } catch (e: any) {
+      showAction(`Ошибка: ${e.response?.data?.detail || e.message}`)
+    }
+  }
+
   const formatDate = (iso: string | null) => {
     if (!iso) return '—'
     return new Date(iso).toLocaleString('ru-RU')
@@ -152,7 +168,7 @@ export default function AdminUserDetails() {
             ID: {user.id}
             {user.nickname && user.email && <> &nbsp;|&nbsp; {user.email}</>}
             {user.telegram_id && (
-              <> &nbsp;|&nbsp; TG: <a href={`tg://user?id=${user.telegram_id}`} className="text-sky-400 underline">@{user.telegram_id}</a></>
+              <> &nbsp;|&nbsp; TG: <a href={`tg://user?id=${user.telegram_id}`} className="text-sky-400 underline cursor-pointer hover:text-sky-300" title="Открыть чат в Telegram">@{user.telegram_id}</a></>
             )}
             &nbsp;|&nbsp; Регистрация: {formatDate(user.created_at)}
           </div>
@@ -214,6 +230,7 @@ export default function AdminUserDetails() {
             onBan={handleBan}
             onUnban={handleUnban}
             onChangeRole={handleChangeRole}
+            onDeleteUser={handleDeleteUser}
           />
         )}
       </div>
@@ -392,13 +409,26 @@ interface ActionsProps {
   onBan: () => void
   onUnban: () => void
   onChangeRole: (role: string) => void
+  onDeleteUser: () => void
 }
 
-function TabActions({ user, isOwner, onToggleVpn, onReissueKey, onResetPassword, onBan, onUnban, onChangeRole }: ActionsProps) {
+function TabActions({ user, isOwner, onToggleVpn, onReissueKey, onResetPassword, onBan, onUnban, onChangeRole, onDeleteUser }: ActionsProps) {
   const hasVpn = !!user.vpn_username
 
   return (
     <div className="space-y-4">
+      {/* Написать в Telegram */}
+      {user.telegram_id && (
+        <a
+          href={`tg://user?id=${user.telegram_id}`}
+          onClick={(e) => { e.preventDefault(); openTelegramChat(user.telegram_id) }}
+          className="bg-sky-900/20 border border-sky-800 text-sky-400 p-3 rounded flex items-center justify-between font-mono hover:bg-sky-900/30 transition-colors block"
+        >
+          <div className="text-sm">[@] Написать в Telegram</div>
+          <div className="text-gray-500 text-xs mt-0.5">Открыть чат (TG ID: {user.telegram_id})</div>
+        </a>
+      )}
+
       {/* VPN-управление (staff) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <button
@@ -470,6 +500,16 @@ function TabActions({ user, isOwner, onToggleVpn, onReissueKey, onResetPassword,
             </button>
           )}
         </div>
+      )}
+
+      {/* Удаление пользователя (только owner) */}
+      {isOwner && user.role !== 'owner' && (
+        <button
+          onClick={onDeleteUser}
+          className="w-full bg-red-950/50 border border-red-900/50 text-red-600 p-3 rounded font-mono hover:bg-red-950/80 transition-colors"
+        >
+          [X] Удалить пользователя навсегда
+        </button>
       )}
     </div>
   )

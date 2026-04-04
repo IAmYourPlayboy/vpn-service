@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { getMe, logout, updateProfile, changeEmail, linkEmail, getTelegramLinkToken } from '../api/client'
+import { getMe, logout, updateProfile, changeEmail, linkEmail, getTelegramLinkToken, changePassword } from '../api/client'
 
 interface User {
   id: number
@@ -33,6 +33,14 @@ export default function Settings() {
 
   // Telegram
   const [linkingTelegram, setLinkingTelegram] = useState(false)
+
+  // Пароль
+  const [editingPassword, setEditingPassword] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
     getMe().then((u) => {
@@ -92,6 +100,42 @@ export default function Settings() {
       alert('Ошибка генерации ссылки')
     } finally {
       setLinkingTelegram(false)
+    }
+  }
+
+  // === Пароль ===
+  async function handleSavePassword() {
+    setSavingPassword(true)
+    setPasswordError('')
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Заполните все поля')
+      setSavingPassword(false)
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('Новый пароль должен содержать минимум 6 символов')
+      setSavingPassword(false)
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Пароли не совпадают')
+      setSavingPassword(false)
+      return
+    }
+
+    try {
+      await changePassword(currentPassword, newPassword)
+      setEditingPassword(false)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (e: any) {
+      setPasswordError(e.response?.data?.detail || 'Ошибка смены пароля')
+    } finally {
+      setSavingPassword(false)
     }
   }
 
@@ -242,6 +286,70 @@ export default function Settings() {
               </span>
             )}
           </span>
+        </div>
+
+        {/* Пароль — смена */}
+        <div className="py-2">
+          {editingPassword ? (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-400 text-sm">Пароль</span>
+                <button
+                  onClick={() => {
+                    setEditingPassword(false)
+                    setCurrentPassword('')
+                    setNewPassword('')
+                    setConfirmPassword('')
+                    setPasswordError('')
+                  }}
+                  className="text-gray-500 text-sm hover:text-white font-mono"
+                >
+                  ✕
+                </button>
+              </div>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Текущий пароль"
+                className="w-full bg-black border border-dark-border px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-white"
+              />
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Новый пароль (мин. 6 символов)"
+                className="w-full bg-black border border-dark-border px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-white"
+              />
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Повторите новый пароль"
+                className="w-full bg-black border border-dark-border px-3 py-1.5 text-sm text-white font-mono focus:outline-none focus:border-white"
+              />
+              {passwordError && (
+                <div className="text-red-400 text-xs font-mono">{passwordError}</div>
+              )}
+              <button
+                onClick={handleSavePassword}
+                disabled={savingPassword || !currentPassword || !newPassword || !confirmPassword}
+                className="bg-green-900/30 border border-green-800 text-green-400 px-4 py-1.5 text-sm font-mono hover:bg-green-900/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {savingPassword ? '...' : 'Сохранить'}
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center py-2 border-b border-dark-border/50">
+              <span className="text-gray-400 text-sm">Пароль</span>
+              <button
+                onClick={() => setEditingPassword(true)}
+                className="text-green-400 text-xs hover:text-green-300 font-mono"
+              >
+                Изменить
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Регистрация */}

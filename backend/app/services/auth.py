@@ -4,6 +4,9 @@ import hashlib
 import hmac
 from datetime import datetime, timedelta, timezone
 
+# Московское время (UTC+3)
+MOSCOW_TZ = timezone(timedelta(hours=3))
+
 import bcrypt
 from jose import JWTError, jwt
 
@@ -22,7 +25,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(user_id: int, role: str = "user") -> str:
     """Создать JWT-токен."""
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
+    expire = datetime.now(MOSCOW_TZ) + timedelta(minutes=settings.jwt_expire_minutes)
     payload = {
         "sub": str(user_id),
         "role": role,

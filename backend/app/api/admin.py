@@ -18,6 +18,10 @@ from app.api.schemas import (
     AdminSubscriptionResponse,
     ChangeRoleRequest,
     CreateUserRequest,
+    DeletePaymentResponse,
+    DeletePlanResponse,
+    DeleteSubscriptionResponse,
+    DeleteUserResponse,
     PaymentResponse,
     PlanCreateRequest,
     PlanResponse,
@@ -361,13 +365,16 @@ async def create_user(
         plan = plan_result.scalar_one_or_none()
         if plan:
             from datetime import datetime, timedelta, timezone
+
+            # Московское время (UTC+3)
+            MOSCOW_TZ = timezone(timedelta(hours=3))
             marzban_username = await create_marzban_user(user.id)
             sub = Subscription(
                 user_id=user.id,
                 plan_id=plan.id,
                 marzban_username=marzban_username,
                 status="active",
-                expires_at=datetime.now(timezone.utc) + timedelta(days=plan.duration_days),
+                expires_at=datetime.now(MOSCOW_TZ) + timedelta(days=plan.duration_days),
             )
             db.add(sub)
             await db.flush()
@@ -566,3 +573,132 @@ async def toggle_plan(
     plan.is_active = not plan.is_active
     status = "включён" if plan.is_active else "выключен"
     return {"detail": f"Тариф '{plan.name}' {status}"}
+
+
+# ============================================================
+#  Удаление записей (только owner)
+# ============================================================
+
+@router.delete("/users/{user_id}", response_model=DeleteUserResponse)
+async def delete_user(
+    user_id: int,
+    admin: User = Depends(get_owner_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Удалить пользователя полностью (только owner)."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Нельзя удалить себя")
+
+    if user.role == "owner":
+        raise HTTPException(status_code=403, detail="Нельзя удалить другого владельца")
+
+    # Сначала удаляем из Marzban (если есть активная подписка)
+    active_sub = next(
+        (s for s in user.subscriptions if s.status == "active"),
+        None,
+    )
+    if active_sub and active_sub.marzban_username:
+        try:
+            await marzban_client.delete_user(active_sub.marzban_username)
+        except Exception:
+            # Marzban недоступен — логируем, но продолжаем удаление
+            pass
+
+    # Каскадное удаление: платежи → подписки → пользователь
+    for payment in user.payments:
+        await db.delete(payment)
+    for sub in user.subscriptions:
+        await db.delete(sub)
+
+    await db.delete(user)
+    await db.commit()
+
+    return DeleteUserResponse(detail=f"Пользователь {user_id} удалён", user_id=user_id)
+
+
+@router.delete("/subscriptions/{sub_id}", response_model=DeleteSubscriptionResponse)
+async def delete_subscription(
+    sub_id: int,
+    admin: User = Depends(get_owner_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Удалить подписку и связанные платежи (только owner)."""
+    result = await db.execute(select(Subscription).where(Subscription.id == sub_id))
+    sub = result.scalar_one_or_none()
+
+    if not sub:
+        raise HTTPException(status_code=404, detail="Подписка не найдена")
+
+    # Если подписка активна — отключаем в Marzban
+    if sub.status == "active" and sub.marzban_username:
+        try:
+            await marzban_client.delete_user(sub.marzban_username)
+        except Exception:
+            pass
+
+    # Удаляем связанные платежи
+    payments_result = await db.execute(select(Payment).where(Payment.subscription_id == sub_id))
+    for payment in payments_result.scalars().all():
+        await db.delete(payment)
+
+    await db.delete(sub)
+    await db.commit()
+
+    return DeleteSubscriptionResponse(detail="Подписка удалена", subscription_id=sub_id)
+
+
+@router.delete("/payments/{payment_id}", response_model=DeletePaymentResponse)
+async def delete_payment(
+    payment_id: int,
+    admin: User = Depends(get_owner_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Удалить платёж (только owner)."""
+    result = await db.execute(select(Payment).where(Payment.id == payment_id))
+    payment = result.scalar_one_or_none()
+
+    if not payment:
+        raise HTTPException(status_code=404, detail="Платёж не найден")
+
+    await db.delete(payment)
+    await db.commit()
+
+    return DeletePaymentResponse(detail="Платёж удалён", payment_id=payment_id)
+
+
+@router.delete("/plans/{plan_id}", response_model=DeletePlanResponse)
+async def delete_plan(
+    plan_id: int,
+    admin: User = Depends(get_owner_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Удалить тариф (только owner)."""
+    result = await db.execute(select(Plan).where(Plan.id == plan_id))
+    plan = result.scalar_one_or_none()
+
+    if not plan:
+        raise HTTPException(status_code=404, detail="Тариф не найден")
+
+    # Защита: нельзя удалить тариф с активными подписками
+    active_subs = await db.scalar(
+        select(func.count(Subscription.id)).where(
+            Subscription.plan_id == plan_id,
+            Subscription.status == "active",
+        )
+    )
+    if active_subs:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Нельзя удалить: есть {active_subs} активных подписок на этом тарифе",
+        )
+
+    await db.delete(plan)
+    await db.commit()
+
+    return DeletePlanResponse(detail="Тариф удалён", plan_id=plan_id)

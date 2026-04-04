@@ -5,6 +5,8 @@ WORKDIR /app
 # Зависимости
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# Установка таймзоны (для TZ env var в docker-compose)
+RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
 
 # Код
 COPY . .

@@ -5,6 +5,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from sqlalchemy import select
 
 from app.bot.keyboards.main_menu import back_to_menu_keyboard, subscription_keyboard
+from app.bot.utils.date_utils import msk_date
 from app.config import settings
 from app.database import async_session
 from app.models.payment import Payment
@@ -42,7 +43,7 @@ async def show_subscription(callback: CallbackQuery):
         text = (
             "💳 <b>Подписка</b>\n\n"
             f"✅ Статус: Активна\n"
-            f"📅 Действует до: {sub.expires_at.strftime('%d.%m.%Y')}\n"
+            f"📅 Действует до: {msk_date(sub.expires_at)}\n"
         )
         keyboard = subscription_keyboard(has_active=True)
     else:
@@ -161,7 +162,7 @@ async def show_payment_history(callback: CallbackQuery):
     lines = ["📜 <b>История платежей</b>\n"]
     for p in payments:
         status = status_map.get(p.status, p.status)
-        date = p.created_at.strftime("%d.%m.%Y")
+        date = msk_date(p.created_at)
         lines.append(f"{status} — {float(p.amount):.0f} ₽ ({date})")
 
     await callback.message.edit_text(

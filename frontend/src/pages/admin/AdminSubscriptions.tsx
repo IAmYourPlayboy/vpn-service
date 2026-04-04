@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
-import { getAdminSubscriptions } from '../../api/client'
+import { getAdminSubscriptions, deleteAdminSubscription, getMe } from '../../api/client'
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Все' },
@@ -16,12 +16,15 @@ export default function AdminSubscriptions() {
   const [subs, setSubs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
+  const [isOwner, setIsOwner] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
       const data = await getAdminSubscriptions(statusFilter || undefined)
       setSubs(data)
+      const me = await getMe()
+      setIsOwner(me.role === 'owner')
     } catch (e) {
       console.error(e)
     } finally {
@@ -30,6 +33,16 @@ export default function AdminSubscriptions() {
   }, [statusFilter])
 
   useEffect(() => { loadData() }, [loadData])
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Удалить подписку? Связанные платежи тоже будут удалены.')) return
+    try {
+      await deleteAdminSubscription(id)
+      loadData()
+    } catch (e: any) {
+      alert(e.response?.data?.detail || 'Ошибка удаления')
+    }
+  }
 
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString('ru-RU')
 
@@ -82,6 +95,7 @@ export default function AdminSubscriptions() {
                 <th className="text-left p-3">Статус</th>
                 <th className="text-left p-3">Начало</th>
                 <th className="text-left p-3">Истекает</th>
+                <th className="text-left p-3">Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -96,10 +110,20 @@ export default function AdminSubscriptions() {
                   </td>
                   <td className="p-3">{formatDate(s.started_at)}</td>
                   <td className="p-3">{formatDate(s.expires_at)}</td>
+                  <td className="p-3">
+                    {isOwner && (
+                      <button
+                        onClick={() => handleDelete(s.id)}
+                        className="text-red-600 hover:text-red-500 text-xs font-bold"
+                      >
+                        [Удалить]
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
               {subs.length === 0 && (
-                <tr><td colSpan={7} className="p-3 text-gray-600">Нет данных</td></tr>
+                <tr><td colSpan={8} className="p-3 text-gray-600">Нет данных</td></tr>
               )}
             </tbody>
           </table>
