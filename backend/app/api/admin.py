@@ -492,7 +492,8 @@ async def list_payments(
             user_telegram_id=user.telegram_id if user else None,
             amount=float(p.amount),
             currency=p.currency,
-            yokassa_payment_id=p.yokassa_payment_id,
+            provider=p.provider,
+            provider_payment_id=p.provider_payment_id,
             status=p.status,
             created_at=p.created_at,
         ))

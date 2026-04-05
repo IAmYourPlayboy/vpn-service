@@ -20,7 +20,7 @@
 ## 2. Описание проекта
 
 - **Что:** Andigo — VPN-сервис (мини-бизнес, десятки-сотни пользователей)
-- **Подход:** Marzban (VPN-ядро) + кастомный фронтенд + Telegram-бот + оплата через ЮКасса
+- **Подход:** Marzban (VPN-ядро) + кастомный фронтенд + Telegram-бот + оплата (Cryptomus + Robokassa)
 - **VDS:** Ubuntu 24.04, 1 vCPU, 2 ГБ RAM, 40 ГБ SSD, IP: 37.230.115.104
 - **Старт:** всё на одном VDS, архитектура масштабируемая (будущие VPN-ноды в других странах)
 - **Домен:** andigo.su
@@ -62,7 +62,7 @@
 | Фронтенд | React 19 + Vite 6 + Tailwind CSS 3 + TypeScript 5 |
 | Веб-сервер | Nginx (reverse proxy + статика) |
 | SSL | Let's Encrypt (certbot) |
-| Оплата | YooKassa Python SDK |
+| Оплата | Мультигейт: Cryptomus (крипто 0.4%) + Robokassa (карты/СБП ~3.5%) |
 | Реалтайм | WebSocket (FastAPI, пинги серверов каждые 5 сек) |
 | HTTP-клиент | httpx (async, для Marzban API) |
 | QR-код | qrcode[pil] |
@@ -98,7 +98,7 @@ vpn/
 │       │   ├── auth.py               # /register, /login, /telegram, /me, /link-email
 │       │   ├── vpn.py                # /config (subscription link + QR)
 │       │   ├── servers.py            # CRUD серверов + cached pings
-│       │   ├── payments.py           # /create, /webhook (ЮКасса), /history
+│       │   ├── payments.py           # /create, /webhook/cryptomus, /webhook/robokassa
 │       │   ├── admin.py              # Админка: CRUD юзеров, роли, VPN, подписки, тарифы
 │       │   └── ws.py                 # WebSocket /ws/servers (реалтайм пинги)
 │       ├── models/
@@ -106,15 +106,19 @@ vpn/
 │       │   ├── user.py               # id, email?, telegram_id?, password_hash?, is_active, role
 │       │   ├── plan.py               # id, name, price, duration_days, is_active
 │       │   ├── subscription.py       # id, user_id, plan_id, marzban_username, status, expires_at
-│       │   ├── payment.py            # id, user_id, subscription_id?, amount, yokassa_payment_id, status
+│       │   ├── payment.py            # id, user_id, subscription_id?, amount, provider, provider_payment_id, status
 │       │   └── server.py             # id, name, country, host, current_load, last_ping_ms, ping_status
 │       ├── services/
 │       │   ├── __init__.py
 │       │   ├── auth.py               # bcrypt хеширование, JWT create/decode, Telegram HMAC verify
 │       │   ├── marzban.py            # MarzbanClient: create/get/delete/disable/enable user, nodes, stats
-│       │   ├── payment.py            # ЮКасса SDK: create_payment, get_payment
+│       │   ├── payment.py            # мультигейт обёртка: create_and_save_payment
 │       │   ├── subscription.py       # activate, check_expired, get_expiring
-│       │   └── ping.py               # async ping, cache, ping_loop (5 сек), WebSocket push
+│       │   ├── ping.py               # async ping, cache, ping_loop (5 сек), WebSocket push
+│       │   └── payment_providers/    # Абстрактные провайдеры платежей
+│       │       ├── base.py           # BasePaymentProvider ABC
+│       │       ├── cryptomus.py       # Крипто-платежи (API cryptomus.com)
+│       │       └── robokassa.py      # Карты/СБП (API robokassa.ru)
 │       └── bot/
 │           ├── __init__.py
 │           ├── bot.py                 # Bot + Dispatcher, регистрация роутеров, webhook setup
@@ -154,8 +158,11 @@ vpn/
 │           ├── Register.tsx           # Форма регистрации
 │           ├── Dashboard.tsx          # Дашборд: статус подписки, QR-код, конфиг
 │           ├── Servers.tsx            # Серверы: WebSocket реалтайм пинги, флаги, цвет задержки
-│           ├── Subscription.tsx       # Покупка/продление -> ЮКасса, история платежей
+│           ├── Subscription.tsx       # Покупка/продление, выбор провайдера, история
 │           ├── Settings.tsx           # Профиль, кнопка выхода
+│           ├── Offer.tsx              # Публичная оферта (для Робокасса / Криптомус)
+│           ├── PrivacyPolicy.tsx      # Политика конфиденциальности (152-ФЗ)
+│           ├── TermsOfService.tsx     # Пользовательское соглашение
 │           └── admin/                 # Админ-панель (owner + support)
 │               ├── AdminOverview.tsx   # Статистика: юзеры, подписки, выручка (owner)
 │               ├── AdminUsers.tsx      # Таблица юзеров: роли, TG-ссылки, создание (owner)
@@ -223,7 +230,8 @@ vpn/
 | subscription_id | FK -> subscriptions, nullable | |
 | amount | Numeric(10,2) | Сумма |
 | currency | String, default "RUB" | |
-| yokassa_payment_id | String, unique | ID платежа в ЮКасса |
+| provider | String(30), default "cryptomus" | Имя провайдера: cryptomus/robokassa/yookassa |
+| provider_payment_id | String, nullable | ID платежа во внешней системе |
 | status | String | pending/succeeded/cancelled |
 | created_at | DateTime | |
 
@@ -265,8 +273,9 @@ POST /api/servers            -- Добавить сервер (только ад
 DELETE /api/servers/{id}     -- Удалить сервер (только админ)
 
 # Оплата
-POST /api/payments/create    -- Создать платёж в ЮКасса
-POST /api/payments/webhook   -- Webhook от ЮКасса (автоматический callback)
+POST /api/payments/create    -- Создать платёж {plan_id, provider: "cryptomus"|"robokassa"}
+POST /api/payments/webhook/cryptomus  -- Webhook от Cryptomus
+POST /api/payments/webhook/robokassa  -- Webhook от Robokassa (ResultURL)
 GET  /api/payments/history   -- История платежей текущего пользователя
 
 # Админка — owner only
@@ -279,6 +288,10 @@ GET  /api/admin/plans                    -- Все тарифы
 POST /api/admin/plans                    -- Создать тариф
 PUT  /api/admin/plans/{id}               -- Обновить тариф
 PATCH /api/admin/plans/{id}/toggle       -- Вкл/выкл тариф
+DELETE /api/admin/plans/{id}             -- Удалить тариф (только владелец)
+DELETE /api/admin/users/{id}             -- Удалить юзера + каскад подписок/платежей (только владелец)
+DELETE /api/admin/subscriptions/{id}     -- Удалить подписку (только владелец)
+DELETE /api/admin/payments/{id}          -- Удалить платёж (только владелец)
 
 # Админка — staff (owner + support)
 GET  /api/admin/users                    -- Список пользователей
@@ -333,7 +346,7 @@ GET  /api/health             -- Health check
 Главное меню (InlineKeyboard):
   "Мой VPN"    -> статус подписки, конфиг (subscription link), QR-код
   "Серверы"    -> список серверов с пингами
-  "Подписка"   -> купить/продлить -> ссылка на оплату ЮКасса
+  "Подписка"   -> купить/продлить -> выбор провайдера -> оплата у Cryptomus/Robokassa
   "Настройки"  -> профиль (email, telegram_id)
   "Помощь"     -> инструкция подключения, FAQ
   "Админка"    -> статистика, юзеры (только owner, проверка role)
@@ -373,9 +386,9 @@ GET  /api/health             -- Health check
 
 ### Оплата
 1. Пользователь нажимает "Купить" (сайт или бот)
-2. POST /api/payments/create -> ЮКасса создаёт платёж -> redirect URL
-3. Пользователь оплачивает на стороне ЮКасса
-4. ЮКасса шлёт webhook на POST /api/payments/webhook
+2. POST /api/payments/create {plan_id, provider} -> создаёт платёж в Cryptomus/Robokassa -> redirect URL
+3. Пользователь оплачивает на стороне платёжной системы
+4. Платёжный шлюз шлёт webhook на POST /api/payments/webhook/{provider}
 5. Бэкенд: обновляет payment status -> activate_subscription -> создаёт юзера в Marzban
 
 ### Получение VPN-ключа
@@ -464,8 +477,16 @@ MARZBAN_USERNAME=admin
 MARZBAN_PASSWORD=admin
 TELEGRAM_BOT_TOKEN=         # Получить у @BotFather
 TELEGRAM_WEBHOOK_URL=       # https://andigo.su/api/bot/webhook
-YOKASSA_SHOP_ID=            # Из личного кабинета ЮКасса
-YOKASSA_SECRET_KEY=         # Из личного кабинета ЮКасса
+
+# Cryptomus (крипто)
+CRYPTOMUS_MERCHANT_ID=      # ID магазина в кабинете Cryptomus
+CRYPTOMUS_API_KEY=          # API ключ
+
+# Robokassa (карты/СБП)
+ROBOKASSA_MERCHANT_LOGIN=
+ROBOKASSA_PASSWORD1=        # Для создания платежа
+ROBOKASSA_PASSWORD2=        # Для проверки webhook
+
 DOMAIN=andigo.su
 ```
 
@@ -547,12 +568,19 @@ SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3
 39. ~~Мобильный лендинг~~ -- карточки фич авто-высота на мобильных (текст не обрезается)
 40. ~~Имя бота обновлено~~ -- andigo_bot → ANDIGO_VpnBot во всех ссылках
 
+### Выполнено (2026-04-04):
+41. ~~Мультигейт оплата~~ -- Cryptomus (крипто) + Robokassa (карты/СБП), абстрактный PaymentProvider
+42. ~~Юридические документы~~ -- Оферта, Политика конфиденциальности, Пользовательское соглашение
+43. ~~Юр. позиционирование~~ -- VPN как "защищённый доступ к интернету", данные самозанятого на сайте
+44. ~~Footer со ссылками~~ -- все страницы содержат ссылки на оферту, политику, соглашение, телефон
+
 ### Не сделано (следующие шаги):
-41. **Реализовать новый дизайн лендинга** -- ASCII Cinema стиль (спецификация: docs/design-spec.md)
-42. **Настроить Telegram-бота** (получить токен у @BotFather для @ANDIGO_VpnBot)
-43. **Настроить ЮКасса** (самозанятый, тестовый режим, shop_id + secret_key)
-44. **Смена пароля в личном кабинете** -- сброс старого + ввод нового (отложено)
-45. **Фаза 2: Система поддержки** -- тикеты от пользователей + FAQ/база знаний (отдельная БД)
+45. **Реализовать новый дизайн лендинга** -- ASCII Cinema стиль (спецификация: docs/design-spec.md)
+46. **Настроить Telegram-бота** (получить токен у @BotFather для @ANDIGO_VpnBot)
+47. **Настроить Cryptomus** (регистрация, получить merchant_id + api_key)
+48. **Настроить Robokassa** (регистрация как самозанятый, получить логин + пароли)
+49. **Смена пароля в личном кабинете** -- сброс старого + ввод нового (отложено)
+50. **Фаза 2: Система поддержки** -- тикеты от пользователей + FAQ/база знаний (отдельная БД)
 
 ---
 
@@ -566,11 +594,15 @@ SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3
 - **Пинг серверов каждые 5 сек** через WebSocket, кеш в памяти
 - **Один тариф** -- полный доступ ко всем серверам
 - **Регистрация: email + Telegram** -- оба способа
-- **ЮКасса для оплаты** -- легитимный, SDK есть, документация полная
-- **НЕ Kassa AI** -- исследована и отклонена (нет API/SDK, связана с заблокированной FreeKassa, регистрация в Казахстане, сомнительный сервис)
+- **Мультигейт оплата** -- Cryptomus (крипто от 0.4%) + Robokassa (карты/СБП ~3.5%)
+- **Абстрактный интерфейс PaymentProvider** -- легко добавлять новые шлюзы
+- **НЕ ЮКасса** -- отклонена из-за риска блокировки за VPN-тематику
 - **Дизайн: ASCII Cinema / Darknet** -- чёрный фон, ASCII-анимация (символы текут), белая типографика, darknet-вайб. Спецификация: docs/design-spec.md
 - **Юридическая формулировка** -- на сайте: "приватный доступ", "защищённое подключение". НЕ использовать: "обход блокировок", "анонимность". Слово "VPN" минимизировать
-- **Самозанятый + ЮКасса** -- решение принято, серая зона (VPN формально требует лицензию ФСБ)
+- **Позиционирование для платёжных систем** -- VPN позиционируется как "сервис защищённого доступа к интернету" (услуги шифрования трафика). Это правда, не обман. Все коммерческие VPN так формулируют. Категория: IT-услуги, не "VPN"
+- **Юридические документы на сайте** -- Оферта (/offer), Политика конфиденциальности (/privacy, 152-ФЗ), Пользовательское соглашение (/terms). Ссылки в футере каждой страницы
+- **Данные самозанятого** -- Многолет Михаил Юрьевич, ИНН 682805907931, тел. +7 (980) 538-26-48. Указаны в оферте и политике конфиденциальности
+- **Самозанятый + Cryptomus** -- нет проверок, нет требований к юрлицу, VPN не проблема
 
 ---
 

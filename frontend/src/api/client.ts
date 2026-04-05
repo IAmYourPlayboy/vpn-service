@@ -107,8 +107,8 @@ export async function getServers() {
 
 // === Платежи ===
 
-export async function createPayment(planId: number) {
-  const { data } = await api.post('/payments/create', { plan_id: planId })
+export async function createPayment(planId: number, provider: string = 'cryptomus') {
+  const { data } = await api.post('/payments/create', { plan_id: planId, provider })
   return data
 }
 

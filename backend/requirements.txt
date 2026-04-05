@@ -17,8 +17,7 @@ pydantic-settings==2.7.1
 # Telegram-бот
 aiogram==3.17.0
 
-# Оплата
-yookassa==3.4.0
+# Оплата (мультигейт — не требует SDK, HTTP-запросы через httpx)
 
 # Marzban API клиент
 httpx==0.28.1

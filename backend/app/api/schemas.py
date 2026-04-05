@@ -68,12 +68,14 @@ class SubscriptionResponse(BaseModel):
 
 class CreatePaymentRequest(BaseModel):
     plan_id: int
+    provider: str = "cryptomus"  # "cryptomus" | "robokassa"
 
 
 class PaymentResponse(BaseModel):
     id: int
     amount: float
     currency: str
+    provider: str
     status: str
     created_at: datetime
     confirmation_url: str | None = None
@@ -158,7 +160,8 @@ class AdminPaymentResponse(BaseModel):
     user_telegram_id: int | None = None
     amount: float
     currency: str
-    yokassa_payment_id: str | None = None
+    provider: str
+    provider_payment_id: str | None = None
     status: str
     created_at: datetime
 

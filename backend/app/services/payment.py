@@ -1,72 +1,74 @@
-"""Сервис платежей — интеграция с ЮКасса."""
+"""Сервис платежей — мультигейт обёртка над провайдерами."""
 
 import logging
 import uuid
+from typing import Any
 
-from yookassa import Configuration, Payment
-
-from app.config import settings
+from app.services.payment_providers import get_provider
 
 logger = logging.getLogger(__name__)
 
-# Инициализация ЮКасса SDK
-Configuration.account_id = settings.yokassa_shop_id
-Configuration.secret_key = settings.yokassa_secret_key
 
+async def create_and_save_payment(
+    user_id: int,
+    plan_id: int,
+    plan_price: float,
+    provider_name: str,
+    domain: str,
+    user_email: str | None = None,
+    db=None,
+) -> dict[str, Any]:
+    """Создать платёж через выбранный провайдер и сохранить в БД.
 
-def create_yokassa_payment(
-    amount: float,
-    description: str,
-    return_url: str,
-    metadata: dict | None = None,
-) -> dict:
-    """Создать платёж в ЮКасса.
-
-    Args:
-        amount: Сумма в рублях
-        description: Описание платежа
-        return_url: URL для возврата после оплаты
-        metadata: Метаданные (user_id, plan_id и т.д.)
-
-    Returns:
-        Данные платежа (id, confirmation_url, status)
+    Это основная функция создания платежа. Она:
+    1. Получает провайдер по имени
+    2. Вызывает create_payment у провайдера
+    3. Сохраняет платёж в БД
+    4. Возвращает данные для фронтенда
     """
-    payment = Payment.create(
-        {
-            "amount": {
-                "value": f"{amount:.2f}",
-                "currency": "RUB",
-            },
-            "confirmation": {
-                "type": "redirect",
-                "return_url": return_url,
-            },
-            "capture": True,  # Автоматическое подтверждение
-            "description": description,
-            "metadata": metadata or {},
-        },
-        idempotency_key=str(uuid.uuid4()),
+    from datetime import datetime, timezone, timedelta
+    from app.models.payment import Payment
+
+    provider = get_provider(provider_name)
+
+    # order_id содержит user_id и plan_id для надёжной связи в webhook
+    order_id = f"pay:{user_id}:{plan_id}:{uuid.uuid4().hex[:8]}"
+
+    return_url = f"https://{domain}/dashboard?payment=success&provider={provider_name}"
+    webhook_url = f"https://{domain}/api/payments/webhook/{provider_name}"
+
+    metadata = {
+        "user_id": str(user_id),
+        "plan_id": str(plan_id),
+        "email": user_email,
+    }
+
+    payment_data = await provider.create_payment(
+        amount=plan_price,
+        order_id=order_id,
+        return_url=return_url,
+        webhook_url=webhook_url,
+        metadata=metadata,
     )
 
-    logger.info(f"ЮКасса: создан платёж {payment.id} на {amount} ₽")
+    # Сохраняем в БД
+    payment = Payment(
+        user_id=user_id,
+        provider=provider_name,
+        provider_payment_id=payment_data.get("provider_payment_id"),
+        amount=plan_price,
+        currency="RUB",
+        status="pending",
+    )
+    db.add(payment)
+    await db.flush()
 
     return {
         "id": payment.id,
-        "status": payment.status,
-        "confirmation_url": payment.confirmation.confirmation_url if payment.confirmation else None,
+        "amount": plan_price,
+        "currency": "RUB",
+        "provider": provider_name,
+        "status": "pending",
+        "created_at": payment.created_at,
+        "confirmation_url": payment_data.get("confirmation_url"),
     }
-
-
-def get_yokassa_payment(payment_id: str) -> dict | None:
-    """Получить статус платежа из ЮКасса."""
-    try:
-        payment = Payment.find_one(payment_id)
-        return {
-            "id": payment.id,
-            "status": payment.status,
-            "amount": float(payment.amount.value),
-            "metadata": payment.metadata or {},
-        }
-    except Exception:
-        logger.exception(f"Ошибка при получении платежа {payment_id}")
-        return None

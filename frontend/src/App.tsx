@@ -15,6 +15,9 @@ import Dashboard from './pages/Dashboard'
 import Servers from './pages/Servers'
 import Subscription from './pages/Subscription'
 import Settings from './pages/Settings'
+import Offer from './pages/Offer'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
 
 // Админка
 import AdminOverview from './pages/admin/AdminOverview'
@@ -40,6 +43,9 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/offer" element={<Offer />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfService />} />
 
       {/* Защищённые — внутри Layout */}
       <Route

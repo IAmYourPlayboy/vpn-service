@@ -378,8 +378,14 @@ export default function Landing() {
       {/* ===== FOOTER ===== */}
       <footer className="border-t border-dark-border py-8 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-600">
-          <span className="font-mono">© 2026 Andigo</span>
-          <div className="flex gap-6">
+          <div>
+            <span className="font-mono">© 2026 Andigo</span>
+            <span className="ml-3 font-mono">Самозанятый</span>
+          </div>
+          <div className="flex flex-wrap gap-4 md:gap-6">
+            <Link to="/offer" className="hover:text-white transition-colors">Оферта</Link>
+            <Link to="/privacy" className="hover:text-white transition-colors">Конфиденциальность</Link>
+            <Link to="/terms" className="hover:text-white transition-colors">Соглашение</Link>
             <a
               href="https://t.me/ANDIGO_VpnBot"
               target="_blank"
@@ -387,6 +393,12 @@ export default function Landing() {
               className="hover:text-white transition-colors"
             >
               Telegram
+            </a>
+            <a
+              href="tel:+79805382648"
+              className="hover:text-white transition-colors"
+            >
+              +7 (980) 538-26-48
             </a>
             <a
               href="mailto:support@andigo.su"

@@ -12,7 +12,7 @@ from app.models.payment import Payment
 from app.models.plan import Plan
 from app.models.subscription import Subscription
 from app.models.user import User
-from app.services.payment import create_yokassa_payment
+from app.services.payment_providers import get_provider
 
 router = Router()
 
@@ -83,13 +83,19 @@ async def buy_or_renew(callback: CallbackQuery):
             await callback.answer()
             return
 
-    # Создаём платёж в ЮКасса
-    return_url = f"https://{settings.domain}/dashboard?payment=success"
+    # Создаём платёж через Cryptomus (по умолчанию для бота)
+    return_url = f"https://{settings.domain}/dashboard?payment=success&provider=cryptomus"
+
     try:
-        payment_data = create_yokassa_payment(
+        provider = get_provider("cryptomus")
+        import uuid
+        order_id = f"bot:{user.id}:{plan.id}:{uuid.uuid4().hex[:8]}"
+
+        payment_data = await provider.create_payment(
             amount=float(plan.price),
-            description=f"VPN подписка: {plan.name} ({plan.duration_days} дней)",
+            order_id=order_id,
             return_url=return_url,
+            webhook_url=f"https://{settings.domain}/api/payments/webhook/cryptomus",
             metadata={
                 "user_id": str(user.id),
                 "plan_id": str(plan.id),
@@ -105,6 +111,20 @@ async def buy_or_renew(callback: CallbackQuery):
         await callback.message.answer("❌ Ошибка платёжной системы. Попробуйте позже.")
         await callback.answer()
         return
+
+    # Сохраняем платёж в БД
+    payment = Payment(
+        user_id=user.id,
+        provider="cryptomus",
+        provider_payment_id=payment_data.get("provider_payment_id"),
+        amount=float(plan.price),
+        currency="RUB",
+        status="pending",
+    )
+
+    async with async_session() as db:
+        db.add(payment)
+        await db.flush()
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"💰 Оплатить {plan.price:.0f} ₽", url=confirmation_url)],
@@ -153,6 +173,13 @@ async def show_payment_history(callback: CallbackQuery):
         await callback.answer()
         return
 
+    # Маппинг провайдеров для отображения
+    provider_map = {
+        "cryptomus": "[Крипто]",
+        "robokassa": "[Карта]",
+        "yookassa": "[ЮКасса]",
+    }
+
     status_map = {
         "pending": "⏳ Ожидание",
         "succeeded": "✅ Оплачен",
@@ -163,7 +190,8 @@ async def show_payment_history(callback: CallbackQuery):
     for p in payments:
         status = status_map.get(p.status, p.status)
         date = msk_date(p.created_at)
-        lines.append(f"{status} — {float(p.amount):.0f} ₽ ({date})")
+        prov = provider_map.get(p.provider, p.provider)
+        lines.append(f"{status} {prov} — {float(p.amount):.0f} ₽ ({date})")
 
     await callback.message.edit_text(
         "\n".join(lines),

@@ -92,8 +92,9 @@ export default function AdminPayments() {
                 <th className="text-left p-3">Пользователь</th>
                 <th className="text-left p-3">Сумма</th>
                 <th className="text-left p-3">Валюта</th>
+                <th className="text-left p-3">Провайдер</th>
                 <th className="text-left p-3">Статус</th>
-                <th className="text-left p-3">ЮКасса ID</th>
+                <th className="text-left p-3">ID платежа</th>
                 <th className="text-left p-3">Дата</th>
                 <th className="text-left p-3">Действия</th>
               </tr>
@@ -106,9 +107,14 @@ export default function AdminPayments() {
                   <td className="p-3">{p.amount}</td>
                   <td className="p-3">{p.currency}</td>
                   <td className="p-3">
+                    <span className={p.provider === 'cryptomus' ? 'text-green-400' : p.provider === 'yookassa' ? 'text-blue-400' : 'text-yellow-400'}>
+                      {p.provider === 'cryptomus' ? '[Крипто]' : p.provider === 'yookassa' ? '[ЮКасса]' : '[Карта]'}
+                    </span>
+                  </td>
+                  <td className="p-3">
                     <span className={statusColor(p.status)}>{p.status}</span>
                   </td>
-                  <td className="p-3 text-xs text-gray-500">{p.yokassa_payment_id || '—'}</td>
+                  <td className="p-3 text-xs text-gray-500">{p.provider_payment_id || '—'}</td>
                   <td className="p-3">{formatDate(p.created_at)}</td>
                   <td className="p-3">
                     {isOwner && (
@@ -123,7 +129,7 @@ export default function AdminPayments() {
                 </tr>
               ))}
               {payments.length === 0 && (
-                <tr><td colSpan={8} className="p-3 text-gray-600">Нет данных</td></tr>
+                <tr><td colSpan={9} className="p-3 text-gray-600">Нет данных</td></tr>
               )}
             </tbody>
           </table>

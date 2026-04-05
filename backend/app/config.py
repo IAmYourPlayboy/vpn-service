@@ -26,9 +26,14 @@ class Settings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_webhook_url: str = ""  # https://site.com/api/bot/webhook
 
-    # --- ЮКасса ---
-    yokassa_shop_id: str = ""
-    yokassa_secret_key: str = ""
+    # --- Cryptomus (крипто-платежи) ---
+    cryptomus_merchant_id: str = ""
+    cryptomus_api_key: str = ""
+
+    # --- Robokassa (карты/СБП) ---
+    robokassa_merchant_login: str = ""
+    robokassa_password1: str = ""   # Для SignatureValue при создании платежа
+    robokassa_password2: str = ""   # Для проверки ResultURL webhook
 
     # --- Домен ---
     domain: str = "localhost"

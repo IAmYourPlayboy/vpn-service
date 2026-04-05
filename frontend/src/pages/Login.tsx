@@ -10,6 +10,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../api/client'
 import AsciiEarth from '../components/AsciiEarth'
 
+const legalLinks = [
+  { to: '/offer', label: 'Оферта' },
+  { to: '/privacy', label: 'Конфиденциальность' },
+  { to: '/terms', label: 'Соглашение' },
+]
+
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -101,6 +107,16 @@ export default function Login() {
               Зарегистрироваться
             </Link>
           </p>
+
+          {/* Юридические ссылки */}
+          <div className="flex justify-center gap-4 mt-4">
+            {legalLinks.map((l) => (
+              <Link key={l.to} to={l.to} className="text-xs text-gray-700 hover:text-gray-400 transition-colors">
+                {l.label}
+              </Link>
+            ))}
+          </div>
+          <p className="text-center text-xs text-gray-800 mt-2 font-mono">© 2026 Andigo · Самозанятый</p>
         </div>
       </div>
 

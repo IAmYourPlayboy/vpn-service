@@ -4,7 +4,7 @@
  * Мобильный таб-бар: elastic overscroll эффект (Samsung-like rubber band).
  */
 
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, Link } from 'react-router-dom'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { getMe, logout } from '../api/client'
 
@@ -128,9 +128,24 @@ export default function Layout() {
       </aside>
 
       {/* Контент */}
-      <main className="flex-1 p-4 md:p-8 pb-20 md:pb-8">
-        <Outlet />
-      </main>
+      <div className="flex-1 flex flex-col">
+        <main className="flex-1 p-4 md:p-8 pb-20 md:pb-8">
+          <Outlet />
+        </main>
+
+        {/* Футер — внизу страницы для авторизованных пользователей */}
+        <footer className="hidden md:flex border-t border-dark-border py-4 px-8 items-center justify-between text-xs text-gray-700 font-mono">
+          <div>
+            <span>© 2026 Andigo</span>
+            <span className="ml-2">Самозанятый</span>
+          </div>
+          <div className="flex gap-4">
+            <Link to="/offer" className="hover:text-gray-400 transition-colors">Оферта</Link>
+            <Link to="/privacy" className="hover:text-gray-400 transition-colors">Конфиденциальность</Link>
+            <Link to="/terms" className="hover:text-gray-400 transition-colors">Соглашение</Link>
+          </div>
+        </footer>
+      </div>
 
       {/* Таб-бар — мобилка с elastic overscroll */}
       <nav
