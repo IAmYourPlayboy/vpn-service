@@ -1,14 +1,13 @@
 /**
- * Страница регистрации — терминальный стиль ч/б.
- * Форма слева, вращающаяся ASCII-Земля справа (desktop).
- * Кнопка "← Назад" в левом верхнем углу.
- * Фон: чёрный + звёзды (CSS).
+ * Страница регистрации — полноэкранная вращающаяся Земля.
+ * Форма в центре, Земля на заднем плане.
  */
 
 import { FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { register } from '../api/client'
-import AsciiEarth from '../components/AsciiEarth'
+import FullscreenEarth from '../components/FullscreenEarth'
+import ThemeToggle from '../components/ThemeToggle'
 
 const legalLinks = [
   { to: '/offer', label: 'Оферта' },
@@ -40,90 +39,94 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-stars flex relative overflow-hidden">
-      {/* Кнопка "← Назад" — левый верхний угол */}
-      <Link
-        to="/"
-        className="absolute top-6 left-6 z-20 text-sm text-gray-500 hover:text-white transition-colors font-mono"
-      >
-        ← Назад
-      </Link>
+    <div className="min-h-screen relative">
+      {/* Полноэкранная Земля на заднем плане */}
+      <FullscreenEarth />
 
-      {/* Форма — слева, центр по вертикали */}
-      <div className="flex-1 flex items-center justify-center px-4 z-10">
-        <div className="w-full max-w-sm">
-          <div className="text-center mb-8">
-            <Link to="/" className="text-2xl font-bold font-mono tracking-wider">ANDIGO</Link>
-            <h1 className="text-xl mt-4">Регистрация</h1>
-          </div>
+      {/* Контент поверх Земли */}
+      <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Верхняя панель: назад + тема */}
+        <div className="flex items-center justify-between px-6 py-4">
+          <Link
+            to="/"
+            className="text-sm text-gray-500 hover:text-white transition-colors font-mono"
+          >
+            ← Назад
+          </Link>
+          <ThemeToggle />
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3">
-                {error}
-              </div>
-            )}
-
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full bg-dark-card border border-dark-border px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-white font-mono text-sm"
-            />
-
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Пароль (минимум 6 символов)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className="w-full bg-dark-card border border-dark-border px-4 py-3 pr-12 text-white placeholder-gray-600 focus:outline-none focus:border-white font-mono text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors font-mono text-xs"
-                tabIndex={-1}
-              >
-                {showPassword ? '[○]' : '[●]'}
-              </button>
+        {/* Форма — по центру */}
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="w-full max-w-sm">
+            <div className="text-center mb-8">
+              <Link to="/" className="text-2xl font-bold font-mono tracking-wider">ANDIGO</Link>
+              <h1 className="text-xl mt-4">Регистрация</h1>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black hover:bg-gray-200 disabled:opacity-50 py-3 font-semibold transition-colors text-sm tracking-wide uppercase"
-            >
-              {loading ? 'Создание...' : 'Создать аккаунт'}
-            </button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3">
+                  {error}
+                </div>
+              )}
 
-          <p className="text-center text-sm text-gray-600 mt-6">
-            Уже есть аккаунт?{' '}
-            <Link to="/login" className="text-white hover:underline">
-              Войти
-            </Link>
-          </p>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full bg-black/60 backdrop-blur border border-dark-border px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white font-mono text-sm"
+              />
 
-          {/* Юридические ссылки */}
-          <div className="flex justify-center gap-4 mt-4">
-            {legalLinks.map((l) => (
-              <Link key={l.to} to={l.to} className="text-xs text-gray-700 hover:text-gray-400 transition-colors">
-                {l.label}
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Пароль (минимум 6 символов)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full bg-black/60 backdrop-blur border border-dark-border px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-white font-mono text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors font-mono text-xs"
+                  tabIndex={-1}
+                >
+                  {showPassword ? '[○]' : '[●]'}
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-white text-black hover:bg-gray-200 disabled:opacity-50 py-3 font-semibold transition-colors text-sm tracking-wide uppercase"
+              >
+                {loading ? 'Создание...' : 'Создать аккаунт'}
+              </button>
+            </form>
+
+            <p className="text-center text-sm text-gray-600 mt-6">
+              Уже есть аккаунт?{' '}
+              <Link to="/login" className="text-white hover:underline">
+                Войти
               </Link>
-            ))}
-          </div>
-          <p className="text-center text-xs text-gray-800 mt-2 font-mono">© 2026 Andigo · Самозанятый</p>
-        </div>
-      </div>
+            </p>
 
-      {/* ASCII-Земля — только десктоп (>= 1024px) */}
-      <div className="hidden lg:flex items-center justify-start flex-shrink-0 pr-8 overflow-hidden">
-        <AsciiEarth className="opacity-80" />
+            {/* Юридические ссылки */}
+            <div className="flex justify-center gap-4 mt-4">
+              {legalLinks.map((l) => (
+                <Link key={l.to} to={l.to} className="text-xs text-gray-700 hover:text-gray-400 transition-colors">
+                  {l.label}
+                </Link>
+              ))}
+            </div>
+            <p className="text-center text-xs text-gray-800 mt-2 font-mono">© 2026 Andigo · Самозанятый</p>
+          </div>
+        </div>
       </div>
     </div>
   )

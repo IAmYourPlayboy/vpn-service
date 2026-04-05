@@ -30,7 +30,7 @@ services:
     expose:
       - "8000"
     volumes:
-      - backend_data:/app/data
+      - /var/lib/andigo/vpn.db:/app/data/vpn.db
     depends_on:
       - marzban
     restart: unless-stopped
@@ -67,7 +67,6 @@ services:
 
 volumes:
   frontend_build:
-  backend_data:
   marzban_data:
   certbot_conf:
   certbot_www:

@@ -578,7 +578,8 @@ SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3
 45. **Реализовать новый дизайн лендинга** -- ASCII Cinema стиль (спецификация: docs/design-spec.md)
 46. **Настроить Telegram-бота** (получить токен у @BotFather для @ANDIGO_VpnBot)
 47. **Настроить Cryptomus** (регистрация, получить merchant_id + api_key)
-48. **Настроить Robokassa** (регистрация как самозанятый, получить логин + пароли)
+48. ~~Настроить Robokassa~~ -- регистрация как самозанятый, MD5 хеш, пароли записаны, webhook URL: /api/payments/webhook/robokassa (POST). Merchant login: andigosu
+48.1. ~~Сохранить пароли Robokassa в проект~~ -- .env.example (andigosu, IFFZR612rRDV0nc9NyIC, dTe1q4jBmcNmt87AZw0b) + production .env на VDS + restart backend
 49. **Смена пароля в личном кабинете** -- сброс старого + ввод нового (отложено)
 50. **Фаза 2: Система поддержки** -- тикеты от пользователей + FAQ/база знаний (отдельная БД)
 

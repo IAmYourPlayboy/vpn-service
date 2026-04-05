@@ -11,6 +11,22 @@ echo "=== Деплой Andigo ==="
 
 cd "$DEPLOY_DIR"
 
+# Бэкап БД — ОБЯЗАТЕЛЬНО первый шаг
+echo ">>> Бэкап БД..."
+mkdir -p /opt/vpn/backups/db
+BACKUP_NAME="vpn-db-$(date +%Y%m%d-%H%M%S).db"
+docker compose cp -L backend:/app/data/vpn.db "/tmp/$BACKUP_NAME" 2>/dev/null || true
+if [ -f "/tmp/$BACKUP_NAME" ]; then
+    cp "/tmp/$BACKUP_NAME" "/opt/vpn/backups/db/"
+    rm "/tmp/$BACKUP_NAME"
+    echo "    Бэкап: /opt/vpn/backups/db/$BACKUP_NAME"
+    # Оставляем только 10 последних бэкапов
+    ls -t /opt/vpn/backups/db/*.db 2>/dev/null | tail -n +11 | xargs -r rm -f
+    echo "    Старые бэкапы удалены"
+else
+    echo "    ПРЕДУПРЕЖДЕНИЕ: не удалось скопировать БД из контейнера, бэкап пропущен"
+fi
+
 # Пересобираем контейнеры
 echo ">>> Сборка контейнеров..."
 docker compose build --no-cache frontend backend

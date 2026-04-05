@@ -6,6 +6,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import AdminLayout from './components/AdminLayout'
 import { isAuthenticated } from './api/client'
+import { ThemeProvider } from './context/ThemeContext'
 
 // Страницы
 import Landing from './pages/Landing'
@@ -18,6 +19,7 @@ import Settings from './pages/Settings'
 import Offer from './pages/Offer'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
+import EarthVariants from './pages/EarthVariants'
 
 // Админка
 import AdminOverview from './pages/admin/AdminOverview'
@@ -38,7 +40,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <Routes>
+    <ThemeProvider>
+      <Routes>
       {/* Публичные */}
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
@@ -46,6 +49,7 @@ export default function App() {
       <Route path="/offer" element={<Offer />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
+      <Route path="/earth-test" element={<EarthVariants />} />
 
       {/* Защищённые — внутри Layout */}
       <Route
@@ -81,5 +85,6 @@ export default function App() {
       {/* 404 */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </ThemeProvider>
   )
 }

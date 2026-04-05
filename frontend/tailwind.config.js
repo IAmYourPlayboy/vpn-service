@@ -2,17 +2,18 @@ import defaultTheme from 'tailwindcss/defaultTheme'
 
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
-        primary: '#ffffff',
+        primary: 'var(--color-text)',
         accent: '#ffffff',
         ascii: '#1a1a1a',
         dark: {
-          DEFAULT: '#000000',
-          card: '#0a0a0a',
-          border: '#222222',
+          DEFAULT: 'var(--color-bg)',
+          card: 'var(--color-card)',
+          border: 'var(--color-border)',
         },
       },
       fontFamily: {

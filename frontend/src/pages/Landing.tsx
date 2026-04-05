@@ -12,6 +12,7 @@ import TypingText from '../components/TypingText'
 import ScrambleText from '../components/ScrambleText'
 import SpeedDemo from '../components/SpeedDemo'
 import MultiLangText from '../components/MultiLangText'
+import ThemeToggle from '../components/ThemeToggle'
 
 interface AuthUser {
   nickname: string | null
@@ -218,6 +219,7 @@ export default function Landing() {
               </Link>
             </>
           )}
+          <ThemeToggle />
         </div>
       </header>
 
@@ -233,7 +235,7 @@ export default function Landing() {
 
           {/* Подзаголовок — typing effect */}
           <p className="text-gray-400 text-lg md:text-xl font-mono mb-10 h-8">
-            <TypingText text="Приватный доступ к интернету" speed={70} delay={800} />
+            <TypingText text="Сервис защищённого доступа к интернету · WireGuard · OpenVPN" speed={70} delay={800} />
           </p>
 
           {/* CTA */}
@@ -262,6 +264,42 @@ export default function Landing() {
         {/* Плавный градиент: hero → чёрный фон */}
         <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-b from-transparent to-black z-[1]" />
       </section>
+
+      {/* ===== ОПИСАНИЕ УСЛУГИ (для модерации Robokassa и ясности пользователям) ===== */}
+      <FadeSection>
+        <section className="py-16 px-6 max-w-3xl mx-auto bg-noise">
+          <h2 className="text-xl font-bold mb-6 font-mono text-green-400">
+            $ cat /docs/services.json
+          </h2>
+          <div className="text-gray-400 text-sm leading-relaxed space-y-4 font-mono">
+            <p className="text-white font-semibold">
+              Andigo предоставляет услугу по обеспечению защищённого доступа к сети Интернет.
+            </p>
+            <p>
+              <span className="text-green-400">{`>`}</span> Пользователь получает доступ к серверам защищённого соединения
+              (WireGuard, OpenVPN) в нескольких странах. Весь трафик между устройством пользователя
+              и сервером шифруется — данные не могут быть перехвачены третьими лицами при использовании
+              публичных Wi-Fi-сетей или других незащищённых соединений.
+            </p>
+            <p>
+              <span className="text-green-400">{`>`}</span> <span className="text-white">Подписка «Стандарт» — 249 ₽/мес (30 дней).</span> Стоимость фиксирована
+              на весь период действия подписки. Оплата производится онлайн банковской картой,
+              через СБП или криптовалютой. После оплаты пользователь получает ссылку для импорта
+              ключа подключения в любое VPN-приложение.
+            </p>
+            <p>
+              <span className="text-green-400">{`>`}</span> <span className="text-white">Входит в подписку:</span> доступ ко всем серверам и локациям,
+              безлимитный трафик, подключение до 3 устройств одновременно, техническая поддержка
+              по email и Telegram. Автопродление — подписка автоматически продлевается каждый месяц.
+              Отключение — в любой момент в личном кабинете.
+            </p>
+            <p>
+              <span className="text-green-400">{`>`}</span> <span className="text-white">Возврат средств:</span> возможен в течение 14 дней при неиспользованной
+              подписке. Подробнее — на странице <Link to="/offer" className="text-green-400 underline">оферты</Link>.
+            </p>
+          </div>
+        </section>
+      </FadeSection>
 
       {/* ===== ФИЧИ (3 карточки с последовательными анимациями) ===== */}
       <FadeSection>
@@ -310,7 +348,7 @@ export default function Landing() {
       {/* ===== ТАРИФ (стиль терминала) ===== */}
       <FadeSection>
         <section className="py-24 px-6 bg-noise">
-          <div className="max-w-md mx-auto border border-dark-border">
+          <div className="max-w-lg mx-auto border border-dark-border">
             {/* Заголовок терминала */}
             <div className="border-b border-dark-border px-6 py-3">
               <span className="text-gray-600 text-sm font-mono">$ cat /etc/pricing.conf</span>
@@ -320,14 +358,29 @@ export default function Landing() {
               <div className="text-5xl font-bold mb-1">
                 249 <span className="text-lg text-gray-500 font-normal">₽/мес</span>
               </div>
-              <p className="text-gray-500 text-sm mb-8">Полный доступ ко всем серверам</p>
+              <p className="text-gray-500 text-sm mb-6">Тариф «Стандарт» · срок подписки 30 дней</p>
 
-              <div className="space-y-3 font-mono text-sm text-gray-300 mb-10">
-                <div><span className="text-gray-600">&gt;</span> все серверы и локации</div>
+              <div className="space-y-2 font-mono text-sm text-gray-300 mb-6">
+                <div><span className="text-gray-600">&gt;</span> доступ ко всем серверам и локациям</div>
                 <div><span className="text-gray-600">&gt;</span> безлимитный трафик</div>
-                <div><span className="text-gray-600">&gt;</span> до 3 устройств</div>
-                <div><span className="text-gray-600">&gt;</span> поддержка 24/7</div>
+                <div><span className="text-gray-600">&gt;</span> подключение до 3 устройств одновременно</div>
+                <div><span className="text-gray-600">&gt;</span> протоколы WireGuard и OpenVPN</div>
+                <div><span className="text-gray-600">&gt;</span> техническая поддержка по email и Telegram</div>
+                <div><span className="text-gray-600">&gt;</span> автопродление с отключением в любой момент</div>
               </div>
+
+              {/* Способы оплаты */}
+              <div className="mb-6 p-3 border border-dark-border bg-dark-card">
+                <p className="text-gray-600 text-xs font-mono mb-2">Способы оплаты:</p>
+                <p className="text-gray-400 text-xs font-mono">
+                  [x] Банк. карты РФ &nbsp; [x] СБП &nbsp; [x] Криптовалюта (USDT, BTC, ETH)
+                </p>
+              </div>
+
+              {/* Условия возврата */}
+              <p className="text-gray-600 text-xs font-mono mb-6">
+                Возврат средств: до 14 дней при неиспользованной подписке. Подробнее в оферте.
+              </p>
 
               {authUser?.has_active_subscription ? (
                 <div className="block text-center py-3 text-sm tracking-[0.2em] uppercase font-medium border-2 border-green-400 text-green-400">
@@ -375,14 +428,62 @@ export default function Landing() {
         </section>
       </FadeSection>
 
+      {/* ===== ДОКУМЕНТЫ (видимые кнопки для модерации Robokassa) ===== */}
+      <FadeSection>
+        <section className="py-12 px-6 bg-noise">
+          <div className="max-w-lg mx-auto">
+            <h2 className="text-sm font-mono text-gray-600 mb-4 text-center">
+              $ ls /docs/
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Link
+                to="/offer"
+                className="border border-dark-border p-4 text-center hover:border-green-400 transition-colors group"
+              >
+                <div className="text-green-400 font-bold font-mono text-sm mb-1 group-hover:underline">
+                  [offer.txt]
+                </div>
+                <div className="text-gray-500 text-xs font-mono">
+                  Публичная оферта
+                </div>
+              </Link>
+              <Link
+                to="/privacy"
+                className="border border-dark-border p-4 text-center hover:border-green-400 transition-colors group"
+              >
+                <div className="text-green-400 font-bold font-mono text-sm mb-1 group-hover:underline">
+                  [privacy.txt]
+                </div>
+                <div className="text-gray-500 text-xs font-mono">
+                  Конфиденциальность (152-ФЗ)
+                </div>
+              </Link>
+              <Link
+                to="/terms"
+                className="border border-dark-border p-4 text-center hover:border-green-400 transition-colors group"
+              >
+                <div className="text-green-400 font-bold font-mono text-sm mb-1 group-hover:underline">
+                  [terms.txt]
+                </div>
+                <div className="text-gray-500 text-xs font-mono">
+                  Пользовательское соглашение
+                </div>
+              </Link>
+            </div>
+          </div>
+        </section>
+      </FadeSection>
+
       {/* ===== FOOTER ===== */}
       <footer className="border-t border-dark-border py-8 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-600">
           <div>
-            <span className="font-mono">© 2026 Andigo</span>
-            <span className="ml-3 font-mono">Самозанятый</span>
+            <span className="font-mono">© 2026 Andigo · Самозанятый · ИНН 682805907931</span>
           </div>
           <div className="flex flex-wrap gap-4 md:gap-6">
+            <a href="tel:+79805382648" className="hover:text-white transition-colors">
+              +7 (980) 538-26-48
+            </a>
             <Link to="/offer" className="hover:text-white transition-colors">Оферта</Link>
             <Link to="/privacy" className="hover:text-white transition-colors">Конфиденциальность</Link>
             <Link to="/terms" className="hover:text-white transition-colors">Соглашение</Link>
@@ -393,12 +494,6 @@ export default function Landing() {
               className="hover:text-white transition-colors"
             >
               Telegram
-            </a>
-            <a
-              href="tel:+79805382648"
-              className="hover:text-white transition-colors"
-            >
-              +7 (980) 538-26-48
             </a>
             <a
               href="mailto:support@andigo.su"

@@ -120,16 +120,12 @@ export default function Dashboard() {
               </div>
             </div>
           ) : (
-            <div className="text-gray-300">
+            <div className="text-gray-300 text-sm">
               <div>Подписка: <span className="text-green-400">активна</span></div>
-              <div className="mt-2 text-gray-500 text-xs">
-                {/* Прогресс-бар из блочных символов */}
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-white/40">
-                    ▓▓▓▓▓▓▓▓▓▓▒▒▒░░
-                  </span>
-                  <span className="text-gray-500">67%</span>
-                </div>
+              <div className="mt-3 space-y-1 text-gray-500 text-xs">
+                <div><span className="text-gray-600">{'>'}</span> безлимитный трафик</div>
+                <div><span className="text-gray-600">{'>'}</span> все серверы доступны</div>
+                <div><span className="text-gray-600">{'>'}</span> до 3 устройств одновременно</div>
               </div>
             </div>
           )}
